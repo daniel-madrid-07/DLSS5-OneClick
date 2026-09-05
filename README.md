@@ -45,17 +45,25 @@ y a XeSS, y Vulkan pasó a estar soportado de forma nativa.
 | Modelo | `nvngx_dlssnr.dll` (~165 MB) — ver abajo, es la parte que atasca |
 | Juego | Con **cualquier upscaler temporal** (DLSS, FSR o XeSS). DX11, DX12 y Vulkan |
 
-### El modelo es el problema, no el driver
+### El modelo es el problema, y no está en el driver
 
 Puedes tener el 616.64 instalado y no encontrar `nvngx_dlssnr.dll` por ningún
-lado. No es un fallo tuyo: **NVIDIA lo empaqueta dentro del instalador del
-driver pero no lo copia al disco al instalarlo**. Tampoco hay interruptor en la
-NVIDIA App — NVIDIA confirmó que no habría override por juego.
+lado. **No viene en el driver.**
 
-Por eso existe el botón **Buscar modelo**. Baja el instalador completo de
-GeForce desde nvidia.com/Download, déjalo en Descargas **sin ejecutarlo**, y
-púlsalo: lo abre con 7-Zip, saca el DLL y lo guarda en caché. Una sola vez para
-todos los juegos.
+Verificado el 5/9/2026 descargando el instalador oficial 616.64 (938 MB desde
+`us.download.nvidia.com`) y abriéndolo: sus únicos `nvngx_*` son `nvngx.dll`,
+`nvngx_dlssg.dll`, `nvngx_dlisr.dll` y `nvngx_update.exe`. Ni rastro de
+`dlssnr`. Tampoco hay interruptor en la NVIDIA App — NVIDIA confirmó que no
+habría override por juego.
+
+**El modelo lo distribuye cada juego que implementa DLSS 5.** Se descubrió
+dentro de NBA 2K27 (158 MB, se identifica como "NVIDIA DLSSNR" v310.8.0.0). Hoy
+lo traen NBA 2K27, Onimusha: Way of the Sword y The Blood of Dawnwalker.
+
+Por eso el botón **Buscar modelo** mira, por este orden: la caché, tus juegos
+instalados, y solo después cualquier instalador de driver que tengas suelto.
+Basta con tener uno de esos juegos instalado — no hay que jugarlo. El DLL se
+copia a la caché y de ahí a todos los demás juegos.
 
 El programa nunca descarga el modelo de repositorios de terceros. Es de NVIDIA,
 y los sitios que lo reempaquetan son justo los que conviene evitar.
