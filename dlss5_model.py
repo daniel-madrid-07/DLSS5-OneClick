@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 import glob
 import shutil
 import subprocess
@@ -132,6 +133,18 @@ def find_in_games(log=print) -> dict | None:
     return None
 
 
+def app_dir() -> str:
+    """Carpeta desde la que se ejecuta el programa.
+
+    Con PyInstaller, sys.executable es el .exe y __file__ apunta al descomprimido
+    temporal, que no le sirve a nadie. Aqui interesa siempre la carpeta donde el
+    usuario dejo el ejecutable.
+    """
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(os.path.abspath(sys.executable))
+    return os.path.dirname(os.path.abspath(__file__))
+
+
 def find_existing(extra_roots: list[str] | None = None) -> dict:
     """Busca un nvngx_dlssnr.dll ya presente en el sistema.
 
@@ -142,11 +155,14 @@ def find_existing(extra_roots: list[str] | None = None) -> dict:
     result = {"path": None, "size": 0, "version": None, "misnamed": None}
 
     roots = [
+        # Lo primero, junto al propio programa: es donde lo deja cualquiera que
+        # consiga el DLL por su cuenta, sin tener que buscar ninguna carpeta.
+        app_dir(),
+        os.path.join(os.environ.get("LOCALAPPDATA", ""), "DLSS5", "modelo"),
         r"C:\Windows\System32",
         r"C:\Windows\System32\DriverStore\FileRepository",
         r"C:\ProgramData\NVIDIA\NGX\models",
         r"C:\Program Files\NVIDIA Corporation",
-        os.path.join(os.environ.get("LOCALAPPDATA", ""), "DLSS5", "modelo"),
     ] + (extra_roots or [])
 
     from dlss5_scan import file_version
@@ -339,10 +355,15 @@ def help_text(driver: str | None) -> str:
                 "soporta DLSS 5. Actualizalo, aunque eso solo no basta: sigue "
                 "haciendo falta el modelo.")
     return (
-        "nvngx_dlssnr.dll NO viene en el driver.\n\n"
-        "Se comprobo abriendo el instalador oficial 616.64 (938 MB): sus unicos "
-        "nvngx_* son nvngx.dll, nvngx_dlssg.dll y nvngx_dlisr.dll. El modelo no "
-        "esta.\n\n"
+        "Falta nvngx_dlssnr.dll (~158 MB).\n\n"
+        "LO MAS FACIL: si ya tienes el archivo, dejalo en esta misma carpeta,\n"
+        f"junto al programa:\n\n    {app_dir()}\n\n"
+        "Se detecta solo, sin pulsar nada mas.\n\n"
+        "-------------------------------------------------------------\n\n"
+        "Si no lo tienes, de donde sale:\n\n"
+        "NO viene en el driver. Se comprobo abriendo el instalador oficial "
+        "616.64 (938 MB): sus unicos nvngx_* son nvngx.dll, nvngx_dlssg.dll y "
+        "nvngx_dlisr.dll. El modelo no esta.\n\n"
         "Lo distribuye cada JUEGO que implementa DLSS 5. A dia de hoy solo uno:\n"
         "  - " + "\n  - ".join(SHIPPING_GAMES) + "\n\n"
         "Cuidado con estos, que salen en el mismo anuncio de NVIDIA pero NO lo "

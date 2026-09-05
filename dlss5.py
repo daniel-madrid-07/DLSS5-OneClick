@@ -318,10 +318,10 @@ class App(tk.Tk):
             problems.append(f"Driver {drv}: por debajo del minimo 616.56.")
         if not has_model:
             problems.append(
-                "Falta nvngx_dlssnr.dll (~158 MB). No viene en el driver: lo "
-                "trae cada juego con DLSS 5 oficial ("
-                + ", ".join(model_mod.SHIPPING_GAMES[:2])
-                + "...). Instala uno y pulsa \"Buscar modelo\".")
+                "Falta nvngx_dlssnr.dll (~158 MB). Si lo tienes, dejalo junto "
+                "a este programa y se detecta solo. Si no, lo trae "
+                + ", ".join(model_mod.SHIPPING_GAMES)
+                + " en data\\streamline: instalalo y pulsa \"Buscar modelo\".")
         self.warn_lbl.configure(
             text=("  ".join(problems) if problems else
                   "Sistema listo: RTX 50, driver al dia y modelo presente."),
