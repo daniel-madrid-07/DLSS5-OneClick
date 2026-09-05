@@ -17,6 +17,7 @@ from tkinter import ttk, filedialog, messagebox
 import dlss5_scan as scan
 import dlss5_apply as apply_mod
 import dlss5_model as model_mod
+from dlss5_editor import Editor
 
 BG      = "#14161a"
 PANEL   = "#1b1e24"
@@ -176,9 +177,12 @@ class App(tk.Tk):
         self.btn_revert = ttk.Button(right, text="Revertir", state="disabled",
                                      command=self._start_revert)
         self.btn_revert.grid(row=2, column=1, sticky="we", padx=(8, 0))
+        self.btn_opts = ttk.Button(right, text="Ajustes...", state="disabled",
+                                   command=self._open_editor)
+        self.btn_opts.grid(row=3, column=0, sticky="we", pady=(8, 0))
         self.btn_open = ttk.Button(right, text="Abrir carpeta", state="disabled",
                                    command=self._open_folder)
-        self.btn_open.grid(row=3, column=0, columnspan=2, sticky="we", pady=(8, 0))
+        self.btn_open.grid(row=3, column=1, sticky="we", padx=(8, 0), pady=(8, 0))
 
         # log
         self.log_box = tk.Text(self, height=7, bg="#101216", fg="#b9bfc6",
@@ -213,7 +217,8 @@ class App(tk.Tk):
         if on:
             self._on_select()
         else:
-            for b in (self.btn_apply, self.btn_revert, self.btn_open):
+            for b in (self.btn_apply, self.btn_revert, self.btn_open,
+                      self.btn_opts):
                 b.configure(state="disabled")
 
     def log(self, msg: str):
@@ -391,7 +396,8 @@ class App(tk.Tk):
         g = self._current()
         if not g:
             self.detail.configure(text="Selecciona un juego.")
-            for b in (self.btn_apply, self.btn_revert, self.btn_open):
+            for b in (self.btn_apply, self.btn_revert, self.btn_open,
+                      self.btn_opts):
                 b.configure(state="disabled")
             return
 
@@ -414,6 +420,16 @@ class App(tk.Tk):
         self.btn_revert.configure(state="normal" if (installed and not self.busy)
                                   else "disabled")
         self.btn_open.configure(state="normal" if g.exe_dir else "disabled")
+        # Los ajustes solo tienen sentido si ya hay un OptiScaler.ini que editar.
+        self.btn_opts.configure(
+            state="normal" if (installed and not self.busy) else "disabled")
+
+    def _open_editor(self):
+        """Abre el editor de ajustes sobre el juego seleccionado."""
+        g = self._current()
+        if not g or not g.exe_dir:
+            return
+        Editor(self, g, on_saved=self.log)
 
     def _open_folder(self):
         g = self._current()

@@ -16,6 +16,7 @@ import tempfile
 import dlss5_scan as scan
 import dlss5_apply as apply_mod
 import dlss5_model as model_mod
+import dlss5_opts as opts
 
 OK, FAIL = [], []
 
@@ -172,6 +173,68 @@ def main() -> int:
               model_mod.find_existing()["path"] is None
               or os.path.getsize(model_mod.find_existing()["path"])
               >= model_mod.MIN_MODEL_MB << 20)
+
+        # --- editor de ajustes ---------------------------------------------
+        # Cada clave del catalogo tiene que existir de verdad en el INI. Una
+        # clave inventada se escribe sin error y no hace nada: justo el fallo
+        # que tenia Log.LoggingEnabled.
+        ini_data = apply_mod.read_ini(ini)
+        inventadas = [f"{s}.{k}" for _g, s, k, _l, _t, _e, _h
+                      in opts.all_settings()
+                      if k not in ini_data.get(s, {})]
+        check("ningun ajuste del catalogo es inventado", not inventadas,
+              str(inventadas))
+
+        check("read_ini lee todas las secciones", len(ini_data) >= 38,
+              str(len(ini_data)))
+
+        # Escribir desde el editor no debe crecer ni duplicar el archivo.
+        antes = open(ini, encoding="utf-8", errors="replace").read()
+        apply_mod.set_ini(ini, {"DlssNr": {"ColourStrength": "0.80"},
+                                "CAS": {"Enabled": "true"}})
+        despues = open(ini, encoding="utf-8", errors="replace").read()
+        check("editar no cambia el numero de lineas",
+              antes.count("\n") == despues.count("\n"),
+              f"{antes.count(chr(10))} -> {despues.count(chr(10))}")
+        vuelto = apply_mod.read_ini(ini)
+        check("el valor editado se relee igual",
+              vuelto["DlssNr"]["ColourStrength"] == "0.80",
+              vuelto["DlssNr"].get("ColourStrength"))
+        check("editar una seccion no toca otra",
+              vuelto["CAS"]["Enabled"] == "true")
+        check("no se duplican claves al editar",
+              despues.count("\nColourStrength=") == 1,
+              str(despues.count("\nColourStrength=")))
+
+        # El editor no debe inventarse cambios por el mero hecho de dibujarse:
+        # ttk.Scale.set() dispara su callback al construir, y sin guarda eso
+        # convertiria cada 'auto' en el minimo del deslizador al guardar.
+        try:
+            import tkinter as tk
+            import dlss5_editor as editor_mod
+
+            r = tk.Tk()
+            r.withdraw()
+            ed = editor_mod.Editor(r, g)
+            ed.open_groups = {gid for gid, _t, _s, _i in opts.GROUPS}
+            ed._render()
+            ed.update()
+            ed.update_idletasks()
+
+            check("abrir el editor no marca cambios falsos",
+                  not ed._collect(), str(ed._collect())[:120])
+
+            ed.vars[("DlssNr", "ColourStrength")].set("0.75")
+            solo = ed._collect()
+            check("un cambio se cuenta como uno",
+                  sum(len(v) for v in solo.values()) == 1, str(solo))
+            check("el editor expone los 33 ajustes",
+                  len(ed.vars) == len(opts.all_settings()),
+                  f"{len(ed.vars)} vs {len(opts.all_settings())}")
+            ed.destroy()
+            r.destroy()
+        except tk.TclError as e:                     # sin escritorio disponible
+            print(f"[ aviso ] editor no probado: {e}")
 
         # --- marcha atras --------------------------------------------------
         print("\nRevirtiendo...")
