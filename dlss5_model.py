@@ -1,15 +1,22 @@
 """
 Conseguir nvngx_dlssnr.dll, que es lo que de verdad bloquea todo lo demas.
 
-NVIDIA mete el modelo en el paquete del instalador pero NO lo copia al disco
-al instalar el driver. Por eso puedes tener el 616.64 puesto y no encontrarlo
-por ningun lado: no es que falte, es que nunca se extrajo.
+COMPROBADO el 5/9/2026 descargando y abriendo el instalador oficial 616.64
+(938 MB, us.download.nvidia.com): el modelo NO viene en el driver. Los unicos
+nvngx_* del paquete son nvngx.dll, nvngx_dlssg.dll, nvngx_dlisr.dll y
+nvngx_update.exe. Ni rastro de dlssnr.
 
-Aqui hay tres formas de conseguirlo, de mas limpia a menos:
+El modelo lo distribuye CADA JUEGO que implementa DLSS 5. Se encontro por
+primera vez dentro de NBA 2K27 (158 MB, "NVIDIA DLSSNR" v310.8.0.0). Asi que
+la unica fuente limpia es un juego con DLSS 5 oficial ya instalado.
 
-  1. Ya lo tienes en algun sitio (otro juego, una copia previa).
-  2. Esta dentro de un instalador .exe de driver -> se extrae con 7-Zip.
-  3. No hay nada -> se dice claramente que hay que bajar el instalador.
+Formas de conseguirlo, de mas limpia a menos:
+
+  1. Ya lo tienes (una copia previa en la cache).
+  2. Esta dentro de un juego con DLSS 5 oficial instalado -> se copia.
+  3. Esta dentro de un instalador de driver -> se extrae con 7-Zip.
+     Ninguno lo trae a dia de hoy, pero puede cambiar y sale gratis mirar.
+  4. No hay nada -> se dice la verdad en vez de mandar a por un driver inutil.
 
 Nunca se descarga el DLL de repositorios de terceros. Es de NVIDIA, y los
 sitios que lo reempaquetan son justo los que hay que evitar.
@@ -66,6 +73,52 @@ def _run(cmd: list[str], timeout: int = 900) -> subprocess.CompletedProcess:
 # --------------------------------------------------------------------------
 # 1. Buscar copias que ya existan
 # --------------------------------------------------------------------------
+
+# Juegos que se sabe que envian el modelo en sus propios archivos.
+SHIPPING_GAMES = ["NBA 2K27", "Onimusha: Way of the Sword",
+                  "The Blood of Dawnwalker"]
+
+
+def find_in_games(log=print) -> dict | None:
+    """Busca el modelo dentro de los juegos instalados.
+
+    Es la fuente real: NBA 2K27 fue el primero en traerlo, y cualquier juego
+    con DLSS 5 oficial lo lleva en su carpeta.
+    """
+    from dlss5_scan import steam_libraries, installed_games, file_version
+
+    roots: list[str] = []
+    for lib in steam_libraries():
+        common = os.path.join(lib, "steamapps", "common")
+        if os.path.isdir(common):
+            roots.append(common)
+    for g in installed_games():
+        if os.path.isdir(g["path"]):
+            roots.append(g["path"])
+
+    seen: set[str] = set()
+    for root in roots:
+        key = os.path.normcase(root)
+        if key in seen:
+            continue
+        seen.add(key)
+        for dirpath, dirnames, filenames in os.walk(root):
+            if dirpath[len(root):].count(os.sep) >= 6:
+                dirnames[:] = []
+            for fn in filenames:
+                if fn.lower() != MODEL_NAME:
+                    continue
+                full = os.path.join(dirpath, fn)
+                try:
+                    size = os.path.getsize(full)
+                except OSError:
+                    continue
+                if size >= MIN_MODEL_MB << 20:
+                    log(f"  encontrado en un juego: {full}")
+                    return {"path": full, "size": size,
+                            "version": file_version(full)}
+    return None
+
 
 def find_existing(extra_roots: list[str] | None = None) -> dict:
     """Busca un nvngx_dlssnr.dll ya presente en el sistema.
@@ -225,10 +278,18 @@ def obtain(log=print, allow_extract: bool = True) -> dict:
     if not allow_extract:
         return {"path": None, "source": None, "detail": "no encontrado"}
 
+    # La fuente real: un juego que ya lo trae.
+    log("Buscando el modelo dentro de los juegos instalados...")
+    in_game = find_in_games(log=log)
+    if in_game:
+        return {"path": in_game["path"], "source": "juego",
+                "detail": f"{in_game['size'] >> 20} MB, v{in_game['version']}"}
+
     installers = find_installers()
     if not installers:
         return {"path": None, "source": None, "detail":
-                "No hay ningun instalador de driver en Descargas ni en C:\\NVIDIA."}
+                "Ningun juego instalado lo trae, y no hay instaladores de "
+                "driver que mirar."}
 
     for inst in installers:
         log(f"Probando instalador {inst['name']} ({inst['size'] >> 20} MB)...")
@@ -259,16 +320,20 @@ def driver_ok(driver: str | None) -> bool | None:
 
 
 def help_text(driver: str | None) -> str:
-    """Que hacer cuando no aparece el modelo."""
+    """Que hacer cuando no aparece el modelo. Sin mandar a callejones sin salida."""
     ok = driver_ok(driver)
     if ok is False:
-        return (f"Tu driver ({driver}) es anterior al 616.56, que es el minimo "
-                "que incluye el modelo. Actualiza primero.")
+        return (f"Tu driver ({driver}) es anterior al 616.56, el minimo que "
+                "soporta DLSS 5. Actualizalo, aunque eso solo no basta: sigue "
+                "haciendo falta el modelo.")
     return (
-        "El modelo viene DENTRO del instalador del driver, pero NVIDIA no lo "
-        "copia al disco al instalarlo: por eso no aparece aunque tengas el "
-        "driver puesto.\n\n"
-        "Baja el instalador completo de GeForce (no la NVIDIA App) desde "
-        "nvidia.com/Download, dejalo en Descargas SIN ejecutarlo, y pulsa "
-        "\"Buscar modelo\". Se extrae con 7-Zip y se guarda en cache; solo hay "
-        "que hacerlo una vez.")
+        "nvngx_dlssnr.dll NO viene en el driver.\n\n"
+        "Se comprobo abriendo el instalador oficial 616.64 (938 MB): sus unicos "
+        "nvngx_* son nvngx.dll, nvngx_dlssg.dll y nvngx_dlisr.dll. El modelo no "
+        "esta.\n\n"
+        "Lo distribuye cada JUEGO que implementa DLSS 5. Ahora mismo:\n"
+        "  - " + "\n  - ".join(SHIPPING_GAMES) + "\n\n"
+        "Instala uno de esos y pulsa \"Buscar modelo\": se copia de sus archivos "
+        "y queda en cache para todos los demas juegos. No hace falta jugarlo.\n\n"
+        "El modelo pesa ~158 MB y se identifica como \"NVIDIA DLSSNR\". No lo "
+        "bajes de repositorios sueltos: son justo los que hay que evitar.")

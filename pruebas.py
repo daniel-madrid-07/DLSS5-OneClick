@@ -150,6 +150,12 @@ def main() -> int:
               float(ss["WorkingScale"]) > 1.0, ss["WorkingScale"])
         check("supersampling fija el downscaler",
               ss.get("ScalingDownscaler") == "4", str(ss.get("ScalingDownscaler")))
+        check("busca el modelo en los juegos, no solo en el driver",
+              callable(getattr(model_mod, "find_in_games", None)))
+        check("la ayuda no manda a por el driver",
+              "NO viene en el driver" in model_mod.help_text("616.64"))
+        check("la ayuda nombra los juegos que si lo traen",
+              "NBA 2K27" in model_mod.help_text("616.64"))
         check("driver 616.64 se acepta", model_mod.driver_ok("616.64") is True)
         check("driver 580.00 se rechaza", model_mod.driver_ok("580.00") is False)
         check("driver desconocido no miente", model_mod.driver_ok(None) is None)
