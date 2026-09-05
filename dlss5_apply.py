@@ -209,6 +209,37 @@ def _extract_7z(archive: str, out: str, log=print) -> None:
 # Edicion del INI conservando comentarios
 # --------------------------------------------------------------------------
 
+def read_ini(path: str) -> dict[str, dict[str, str]]:
+    """Lee un INI a {seccion: {clave: valor}}. Ignora comentarios.
+
+    No se usa configparser porque el archivo trae claves repetidas comentadas
+    y valores con caracteres que le sientan mal.
+    """
+    out: dict[str, dict[str, str]] = {}
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            section = None
+            for line in f:
+                stripped = line.strip()
+                if not stripped or stripped.startswith(";"):
+                    continue
+                if stripped.startswith("[") and stripped.endswith("]"):
+                    section = stripped[1:-1]
+                    out.setdefault(section, {})
+                elif section and "=" in stripped:
+                    key, _, value = stripped.partition("=")
+                    out[section][key.strip()] = value.strip()
+    except OSError:
+        pass
+    return out
+
+
+def game_ini_path(exe_dir: str) -> str | None:
+    """Ruta al OptiScaler.ini de un juego, si esta instalado."""
+    p = os.path.join(exe_dir, "OptiScaler.ini")
+    return p if os.path.isfile(p) else None
+
+
 def set_ini(path: str, changes: dict[str, dict[str, str]]) -> None:
     """Aplica cambios {seccion: {clave: valor}} sin perder los comentarios.
 
@@ -259,7 +290,9 @@ def build_config(game: Game, preset: str, neural: bool, log_on: bool = False) ->
     """Construye el conjunto de cambios del INI para este juego."""
     cfg: dict[str, dict[str, str]] = {
         "Menu": {"OverlayMenu": "true"},
-        "Log": {"LoggingEnabled": "true" if log_on else "false"},
+        # La clave es LogToFile, no LoggingEnabled: esa no existe en el INI y
+        # se quedaba escrita al final de [Log] sin hacer nada.
+        "Log": {"LogToFile": "true" if log_on else "false"},
     }
 
     if neural:

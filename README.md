@@ -130,6 +130,18 @@ honesta de comprobar si está haciendo algo — a ojo y en movimiento se
 autoengaña uno con facilidad. `DebugView=3` en el INI muestra lo que ha
 cambiado amplificado: un gris plano significa que no toca nada.
 
+### Editor de ajustes
+
+El botón **Ajustes...** abre un editor por juego: lee su `OptiScaler.ini` y deja
+tocar 33 opciones repartidas en cinco grupos plegables — Neural Rendering,
+Upscaler, Calidad y nitidez, Frame Generation y Sistema. Cada control lleva
+debajo lo que hace, con los rangos reales que documenta el propio archivo.
+
+Guarda **solo lo que cambies**: las claves que no toques se quedan como están,
+comentarios incluidos. Un valor en `auto` sigue en `auto` — hacer clic en la
+cifra de un deslizador lo devuelve a `auto`. Los cambios entran al arrancar
+el juego.
+
 ### Lo que hay que tocar a mano
 
 La mejora grande de v0.2.0 es el **proxy reversible**, y su modo recomendado es
@@ -164,8 +176,10 @@ Esta herramienta solo descarga de los repos oficiales listados en
 | `dlss5.py` | Interfaz |
 | `dlss5_scan.py` | Detección: PE, motor, API, upscalers, GPU, anticheat |
 | `dlss5_apply.py` | Descarga, instalación, INI y marcha atrás |
-| `dlss5_model.py` | Conseguir `nvngx_dlssnr.dll` del instalador del driver |
-| `pruebas.py` | 31 comprobaciones, incluida la de que revertir no deja rastro |
+| `dlss5_model.py` | Conseguir `nvngx_dlssnr.dll` de los juegos que lo traen |
+| `dlss5_opts.py` | Catálogo de ajustes editables, con tipos y rangos reales |
+| `dlss5_editor.py` | Editor visual por juego |
+| `pruebas.py` | 46 comprobaciones, incluida la de que revertir no deja rastro |
 
 ## Créditos
 
