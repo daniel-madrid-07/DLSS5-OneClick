@@ -74,9 +74,21 @@ def _run(cmd: list[str], timeout: int = 900) -> subprocess.CompletedProcess:
 # 1. Buscar copias que ya existan
 # --------------------------------------------------------------------------
 
-# Juegos que se sabe que envian el modelo en sus propios archivos.
-SHIPPING_GAMES = ["NBA 2K27", "Onimusha: Way of the Sword",
-                  "The Blood of Dawnwalker"]
+# Juegos que envian el modelo en sus propios archivos.
+#
+# Comprobado el 5/9/2026 contra el anuncio de NVIDIA: el unico con Neural
+# Rendering es NBA 2K27. Onimusha y Dawnwalker aparecen en el mismo articulo
+# pero solo reciben DLSS 4.5 (Super Resolution y Multi Frame Generation), asi
+# que NO traen nvngx_dlssnr.dll. La demo gratuita de Onimusha tampoco sirve.
+SHIPPING_GAMES = ["NBA 2K27"]
+
+# Juegos que suenan a DLSS 5 pero no traen el modelo. Se listan para no mandar
+# a nadie a instalar 100 GB para nada.
+NOT_SHIPPING = {
+    "Onimusha: Way of the Sword": "solo DLSS 4.5, la demo gratuita tampoco vale",
+    "The Blood of Dawnwalker": "solo DLSS 4.5",
+    "STAR WARS Zero Company": "solo DLSS 4.5",
+}
 
 
 def find_in_games(log=print) -> dict | None:
@@ -331,9 +343,15 @@ def help_text(driver: str | None) -> str:
         "Se comprobo abriendo el instalador oficial 616.64 (938 MB): sus unicos "
         "nvngx_* son nvngx.dll, nvngx_dlssg.dll y nvngx_dlisr.dll. El modelo no "
         "esta.\n\n"
-        "Lo distribuye cada JUEGO que implementa DLSS 5. Ahora mismo:\n"
+        "Lo distribuye cada JUEGO que implementa DLSS 5. A dia de hoy solo uno:\n"
         "  - " + "\n  - ".join(SHIPPING_GAMES) + "\n\n"
-        "Instala uno de esos y pulsa \"Buscar modelo\": se copia de sus archivos "
-        "y queda en cache para todos los demas juegos. No hace falta jugarlo.\n\n"
-        "El modelo pesa ~158 MB y se identifica como \"NVIDIA DLSSNR\". No lo "
-        "bajes de repositorios sueltos: son justo los que hay que evitar.")
+        "Cuidado con estos, que salen en el mismo anuncio de NVIDIA pero NO lo "
+        "traen:\n  - "
+        + "\n  - ".join(f"{k} ({v})" for k, v in NOT_SHIPPING.items()) + "\n\n"
+        "Instalalo y pulsa \"Buscar modelo\": se copia de sus archivos y queda "
+        "en cache para todos los demas juegos. No hace falta jugarlo.\n\n"
+        "El modelo pesa ~158 MB y se identifica como \"NVIDIA DLSSNR\".\n\n"
+        "MIENTRAS TANTO: puedes instalar igualmente en tus juegos. OptiScaler "
+        "funciona entero sin el modelo (cambio de upscaler, frame generation, "
+        "RCAS...); solo el paso neuronal queda apagado, y el overlay dice por "
+        "que. Cuando consigas el DLL, vuelve a aplicar y se copia.")

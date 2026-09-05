@@ -156,6 +156,15 @@ def main() -> int:
               "NO viene en el driver" in model_mod.help_text("616.64"))
         check("la ayuda nombra los juegos que si lo traen",
               "NBA 2K27" in model_mod.help_text("616.64"))
+        # Onimusha y Dawnwalker salen en el anuncio de NVIDIA pero solo llevan
+        # DLSS 4.5. Mandar a instalarlos seria hacer perder 100 GB a alguien.
+        check("Onimusha NO figura como fuente del modelo",
+              not any("onimusha" in g.lower() for g in model_mod.SHIPPING_GAMES),
+              str(model_mod.SHIPPING_GAMES))
+        check("Onimusha aparece avisado como que no sirve",
+              any("Onimusha" in k for k in model_mod.NOT_SHIPPING))
+        check("la ayuda dice que se puede instalar sin el modelo",
+              "sin el modelo" in model_mod.help_text("616.64"))
         check("driver 616.64 se acepta", model_mod.driver_ok("616.64") is True)
         check("driver 580.00 se rechaza", model_mod.driver_ok("580.00") is False)
         check("driver desconocido no miente", model_mod.driver_ok(None) is None)
