@@ -12,3 +12,18 @@ dist/
 .idea/
 Thumbs.db
 Desktop.ini
+.DS_Store
+
+# Nada de esto se sube nunca.
+# Los DLL de NVIDIA son propietarios y los paquetes de OptiScaler son de sus
+# autores: este repositorio no redistribuye ninguno de los dos.
+*.dll
+*.zip
+*.7z
+*.exe
+!DLSS5.bat
+nvngx*
+OptiScaler*
+_DLSS5_backup/
+_research/
+cache/
