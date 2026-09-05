@@ -3,17 +3,30 @@
 Detecta qué juegos de tu PC admiten **DLSS 5 Neural Rendering**, lo instala en
 un clic y sabe deshacerlo entero, byte a byte.
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
-![Sin dependencias](https://img.shields.io/badge/dependencias-ninguna-76b900)
+[![Descargar](https://img.shields.io/badge/Descargar-DLSS5--OneClick.exe-76b900?style=for-the-badge)](https://github.com/daniel-madrid-07/DLSS5-OneClick/releases/latest)
+
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
+![Sin instalacion](https://img.shields.io/badge/instalaci%C3%B3n-ninguna-76b900)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-blue)
+
+## Descarga
+
+Baja **`DLSS5-OneClick.exe`** de la
+[última release](https://github.com/daniel-madrid-07/DLSS5-OneClick/releases/latest)
+y ábrelo. Un solo archivo de ~11 MB: **no hace falta instalar Python ni nada
+más**. No se instala en el sistema, no toca el registro.
+
+<details>
+<summary>Ejecutarlo desde el código fuente</summary>
+
+Necesita Python 3.10+ y nada más — no usa `pip`:
 
 ```
 DLSS5.bat          (o:  python dlss5.py)
 ```
 
-Solo necesita **Python 3.10+**. No usa `pip`, no instala nada, y no descarga
-nada hasta que pulsas Aplicar.
+Para compilar tu propio `.exe`: `python build.py` (requiere `pyinstaller`).
+</details>
 
 > [!WARNING]
 > Esto mete un DLL junto al ejecutable de tus juegos. Es exactamente lo que
@@ -87,6 +100,17 @@ desinstalar el juego origen después.
 
 **El programa nunca descarga el modelo de terceros.** Es de NVIDIA, y los sitios
 que lo reempaquetan son justo los que conviene evitar.
+
+> [!IMPORTANT]
+> **Por qué el `.exe` no trae el modelo dentro.** `nvngx_dlssnr.dll` es software
+> propietario de NVIDIA. Redistribuirlo es igual de ilegal embebido en un
+> ejecutable que suelto en un ZIP — el formato no cambia la licencia, y un
+> `.exe` no lo oculta: PyInstaller empaqueta, no cifra. Además, un ejecutable
+> de 170 MB que suelta DLLs en carpetas de juegos es el perfil exacto que los
+> antivirus marcan como troyano.
+>
+> Por eso la herramienta **localiza** el modelo en tu propio disco en vez de
+> traerlo. Todo lo demás sí funciona sin él.
 
 ### No hace falta esperar al modelo para instalar
 
@@ -199,6 +223,7 @@ Esta herramienta solo descarga de los repos oficiales listados en `SOURCES`
 | `dlss5_model.py` | Conseguir `nvngx_dlssnr.dll` de los juegos que lo traen |
 | `dlss5_opts.py` | Catálogo de ajustes, con tipos y rangos reales |
 | `dlss5_editor.py` | Editor visual por juego |
+| `build.py` | Compila el `.exe` de la release |
 | `pruebas.py` | 46 comprobaciones |
 
 ### Pruebas
