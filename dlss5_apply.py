@@ -17,7 +17,8 @@ import tempfile
 import datetime
 import urllib.request
 
-from dlss5_scan import Game, PROXY_NAMES, find_dlssnr_model
+from dlss5_scan import Game, PROXY_NAMES
+import dlss5_model
 
 CACHE = os.path.join(os.environ.get("LOCALAPPDATA", tempfile.gettempdir()), "DLSS5")
 BACKUP_DIR = "_DLSS5_backup"
@@ -56,6 +57,9 @@ SOURCES = {
 #   MaxRatio          tope de cuanto puede aclarar un pixel
 #   WorkingScale      fraccion del fotograma a la que trabaja el modelo
 #
+# WorkingScale por encima de 1.0 hace supersampling del modelo (DX12 y Vulkan,
+# desde v0.2.0) y ScalingDownscaler elige el filtro que promedia la respuesta de
+# vuelta: 4 = Lanczos3, el que recomienda el propio INI.
 PRESETS = {
     "suave": {
         "label": "Suave  -  respeta el arte original",
@@ -71,6 +75,12 @@ PRESETS = {
         "label": "Maximo detalle  -  se nota, y se paga",
         "DlssNr": {"TransferStrength": "1.25", "ColourStrength": "1.0",
                    "MaxRatio": "2.5", "WorkingScale": "1.0", "Intensity": "1.2"},
+    },
+    "supersampling": {
+        "label": "Supersampling  -  el modelo por encima de nativo, menos ruido",
+        "DlssNr": {"TransferStrength": "1.0", "ColourStrength": "0.6",
+                   "MaxRatio": "2.0", "WorkingScale": "1.5", "Intensity": "1.0",
+                   "ScalingDownscaler": "4"},
     },
     "rendimiento": {
         "label": "Rendimiento  -  el modelo trabaja a media resolucion",
@@ -256,12 +266,14 @@ def build_config(game: Game, preset: str, neural: bool, log_on: bool = False) ->
         nr = dict(PRESETS[preset]["DlssNr"])
         nr.update({"Enabled": "true", "DebugView": "0", "AutoCapture": "false",
                    "AutoMask": "true"})
+        # F10 enciende y apaga el paso dentro del juego sin abrir el overlay.
+        # Es la unica forma honesta de ver si esta haciendo algo.
+        nr.setdefault("ToggleKey", "0x79")
         cfg["DlssNr"] = nr
 
-    # Si el juego no trae DLSS, se le pide a OptiScaler que lo use de salida.
-    if game.tier == "B":
-        cfg["Upscalers"] = {"Dx12Upscaler": "dlss", "Dx11Upscaler": "dlss"}
-
+    # Ya no se fuerza DLSS como upscaler de salida en juegos con FSR/XeSS:
+    # desde v0.2.0 el paso neuronal lee las entradas de cualquiera de los tres,
+    # asi que cambiar el upscaler solo anadiria riesgo sin dar nada a cambio.
     return cfg
 
 
@@ -294,6 +306,7 @@ def read_manifest(exe_dir: str) -> dict | None:
 
 def install(game: Game, preset: str = "equilibrado", kind: str = "dlssnr",
             neural: bool = True, copy_model: bool = True,
+            model_path: str | None = None,
             progress=None, log=print) -> dict:
     """Copia el paquete al juego, deja copia de seguridad y escribe el INI."""
     if not game.exe_dir:
@@ -375,22 +388,19 @@ def install(game: Game, preset: str = "equilibrado", kind: str = "dlssnr",
 
     # --- modelo de Neural Rendering ---------------------------------------
     if neural and copy_model:
-        model = find_dlssnr_model()
-        src = model["path"] or model["misnamed"]
-        if src:
-            if model["misnamed"] and not model["path"]:
-                log("Usando un nvngx_dlssd.dll de tamano de modelo: el README "
-                    "del fork avisa de que a veces llega con ese nombre.")
-            log(f"Copiando el modelo ({os.path.getsize(src) >> 20} MB)...")
-            dest_rel = "nvngx_dlssnr.dll"
+        got = model_path or dlss5_model.obtain(log=log)["path"]
+        if got:
+            log(f"Copiando el modelo ({os.path.getsize(got) >> 20} MB)...")
+            dest_rel = dlss5_model.MODEL_NAME
             dest = os.path.join(exe_dir, dest_rel)
             if not os.path.exists(dest):
                 manifest["creados"].append(dest_rel)
-            shutil.copy2(src, dest)
-            manifest["modelo"] = src
+            shutil.copy2(got, dest)
+            manifest["modelo"] = got
         else:
-            log("AVISO: no hay nvngx_dlssnr.dll en el sistema. Neural Rendering "
-                "quedara apagado hasta que instales un driver que lo incluya.")
+            log("AVISO: no se encontro nvngx_dlssnr.dll. OptiScaler queda "
+                "instalado y funcionando, pero el paso neuronal estara apagado "
+                "hasta que consigas el modelo (boton \"Buscar modelo\").")
             manifest["modelo"] = None
 
     with open(os.path.join(backup, MANIFEST), "w", encoding="utf-8") as f:

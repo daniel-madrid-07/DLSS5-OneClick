@@ -15,6 +15,7 @@ import tempfile
 
 import dlss5_scan as scan
 import dlss5_apply as apply_mod
+import dlss5_model as model_mod
 
 OK, FAIL = [], []
 
@@ -109,10 +110,53 @@ def main() -> int:
         check("los comentarios del ini sobreviven",
               "; DLSS 5 Neural Rendering" in text)
 
+        check("[DlssNr] ToggleKey escrito (F10)", "\nToggleKey=0x79" in sec)
+
         # --- reanalisis ---------------------------------------------------
         g2 = scan.analyze(root, "Juego Falso")
         check("reconoce su propia instalacion", g2.installed_proxy is not None,
               str(g2.installed_proxy))
+
+        # --- clasificacion v0.2.0 -----------------------------------------
+        # NR ya no exige DLSS ni DirectX. Un juego solo-Vulkan con FSR debe
+        # quedar como aplicable, no descartado.
+        vk = scan.Game(name="vk", root=root, exe="x", exe_dir=root,
+                       apis={"vulkan"}, upscalers={"fsr": "FSR"})
+        scan._classify(vk)
+        check("Vulkan + FSR es aplicable (v0.2.0)", vk.tier == "B",
+              f"{vk.tier}: {vk.verdict}")
+
+        xess = scan.Game(name="xe", root=root, exe="x", exe_dir=root,
+                         apis={"dx12"}, upscalers={"xess": "XeSS"})
+        scan._classify(xess)
+        check("XeSS sin DLSS es aplicable", xess.tier == "B",
+              f"{xess.tier}: {xess.verdict}")
+
+        nada = scan.Game(name="n", root=root, exe="x", exe_dir=root,
+                         apis={"dx12"}, upscalers={})
+        scan._classify(nada)
+        check("sin upscaler sigue siendo no", nada.tier == "D", nada.tier)
+
+        # ya no se fuerza el upscaler de salida en juegos FSR/XeSS
+        cfg = apply_mod.build_config(xess, "equilibrado", neural=True)
+        check("no se fuerza Dx12Upscaler", "Upscalers" not in cfg,
+              str(cfg.get("Upscalers")))
+
+        # --- modelo --------------------------------------------------------
+        check("preset de supersampling existe",
+              "supersampling" in apply_mod.PRESETS)
+        ss = apply_mod.PRESETS["supersampling"]["DlssNr"]
+        check("supersampling pide WorkingScale > 1",
+              float(ss["WorkingScale"]) > 1.0, ss["WorkingScale"])
+        check("supersampling fija el downscaler",
+              ss.get("ScalingDownscaler") == "4", str(ss.get("ScalingDownscaler")))
+        check("driver 616.64 se acepta", model_mod.driver_ok("616.64") is True)
+        check("driver 580.00 se rechaza", model_mod.driver_ok("580.00") is False)
+        check("driver desconocido no miente", model_mod.driver_ok(None) is None)
+        check("find_existing ignora DLL pequenos",
+              model_mod.find_existing()["path"] is None
+              or os.path.getsize(model_mod.find_existing()["path"])
+              >= model_mod.MIN_MODEL_MB << 20)
 
         # --- marcha atras --------------------------------------------------
         print("\nRevirtiendo...")
