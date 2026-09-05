@@ -57,16 +57,31 @@ Verificado el 5/9/2026 descargando el instalador oficial 616.64 (938 MB desde
 habría override por juego.
 
 **El modelo lo distribuye cada juego que implementa DLSS 5.** Se descubrió
-dentro de NBA 2K27 (158 MB, se identifica como "NVIDIA DLSSNR" v310.8.0.0). Hoy
-lo traen NBA 2K27, Onimusha: Way of the Sword y The Blood of Dawnwalker.
+dentro de NBA 2K27 (158 MB, se identifica como "NVIDIA DLSSNR" v310.8.0.0), y
+a día de hoy **ese es el único que lo trae**.
+
+Ojo con el anuncio de NVIDIA, que agrupa cosas distintas: Onimusha: Way of the
+Sword, The Blood of Dawnwalker y STAR WARS Zero Company salen en el mismo
+artículo pero solo reciben **DLSS 4.5** (Super Resolution y Multi Frame
+Generation). No llevan el modelo. La demo gratuita de Onimusha tampoco.
 
 Por eso el botón **Buscar modelo** mira, por este orden: la caché, tus juegos
 instalados, y solo después cualquier instalador de driver que tengas suelto.
-Basta con tener uno de esos juegos instalado — no hay que jugarlo. El DLL se
-copia a la caché y de ahí a todos los demás juegos.
+Basta con tener el juego instalado — no hay que jugarlo. El DLL se copia a la
+caché y de ahí a todos los demás juegos.
 
 El programa nunca descarga el modelo de repositorios de terceros. Es de NVIDIA,
 y los sitios que lo reempaquetan son justo los que conviene evitar.
+
+### No hace falta esperar al modelo para instalar
+
+El paso neuronal es **opcional dentro de OptiScaler**, no un requisito para que
+arranque. Sin `nvngx_dlssnr.dll` se instala igual y funciona todo lo demás:
+cambiar el upscaler, frame generation, RCAS, overrides de DLSS. Solo el paso de
+Neural Rendering queda apagado, y el overlay dice exactamente por qué
+(`"nvngx_dlssnr.dll was not found"`) en vez de fallar en silencio.
+
+Cuando consigas el DLL, vuelve a darle a aplicar y se copia sin tocar nada más.
 
 ## Los niveles
 
