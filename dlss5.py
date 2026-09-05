@@ -16,17 +16,18 @@ from tkinter import ttk, filedialog, messagebox
 
 import dlss5_scan as scan
 import dlss5_apply as apply_mod
+import dlss5_model as model_mod
 
 BG      = "#14161a"
 PANEL   = "#1b1e24"
 FG      = "#e8eaed"
 MUTED   = "#93999f"
 ACCENT  = "#76b900"          # el verde de NVIDIA, ya que estamos
-TIER_COLOR = {"A": "#76b900", "B": "#e0a325", "C": "#e07b25", "D": "#7a8087"}
+TIER_COLOR = {"A": "#76b900", "B": "#9ecf3a", "C": "#e07b25", "D": "#7a8087"}
 TIER_TEXT = {
-    "A": "Si",
-    "B": "Parcial",
-    "C": "Solo upscaler",
+    "A": "Si  (DLSS)",
+    "B": "Si  (FSR/XeSS)",
+    "C": "Limitado",
     "D": "No",
 }
 
@@ -116,6 +117,9 @@ class App(tk.Tk):
         self.btn_sys = ttk.Button(bar, text="Recomprobar sistema",
                                   command=lambda: self._bg(self._check_system))
         self.btn_sys.pack(side="left", padx=(8, 0))
+        self.btn_model = ttk.Button(bar, text="Buscar modelo",
+                                    command=lambda: self._bg(self._get_model))
+        self.btn_model.pack(side="left", padx=(8, 0))
 
         self.prog = ttk.Progressbar(bar, mode="determinate", length=220)
         self.prog.pack(side="right")
@@ -204,7 +208,7 @@ class App(tk.Tk):
 
     def _buttons(self, on: bool):
         state = "normal" if on else "disabled"
-        for b in (self.btn_scan, self.btn_add, self.btn_sys):
+        for b in (self.btn_scan, self.btn_add, self.btn_sys, self.btn_model):
             b.configure(state=state)
         if on:
             self._on_select()
@@ -236,6 +240,10 @@ class App(tk.Tk):
                     messagebox.showerror("DLSS 5 One-Click", str(payload))
                 elif kind == "info":
                     messagebox.showinfo("DLSS 5 One-Click", str(payload))
+                elif kind == "modelhelp":
+                    messagebox.showwarning(
+                        "Falta el modelo de Neural Rendering",
+                        model_mod.help_text(payload))
                 elif kind == "done":
                     self.busy = False
                     self._buttons(True)
@@ -246,10 +254,27 @@ class App(tk.Tk):
         self.after(80, self._pump)
 
     # -- sistema -----------------------------------------------------------
+    def _get_model(self):
+        """Busca el modelo y, si hace falta, lo saca del instalador del driver."""
+        self.log("")
+        self.log("Buscando nvngx_dlssnr.dll...")
+        res = model_mod.obtain(log=self.log)
+        if res["path"]:
+            cached = model_mod.cache_model(res["path"], log=self.log)
+            self.log(f"Modelo listo ({res['source']}): {cached}")
+            self.q.put(("info", "Modelo encontrado y guardado en cache.\n\n"
+                                f"Origen: {res['detail']}\n\n"
+                                "Vuelve a aplicar en los juegos que ya tenias "
+                                "instalados para copiarlo en cada uno."))
+        else:
+            self.log("No se encontro: " + res["detail"])
+            self.q.put(("modelhelp", scan.gpu_info().get("driver")))
+        self._check_system()
+
     def _check_system(self):
         self.log("Comprobando GPU, driver y modelo de Neural Rendering...")
         info = scan.gpu_info()
-        model = scan.find_dlssnr_model()
+        model = model_mod.find_existing()
         self.q.put(("sys", (info, model)))
         self.log(f"GPU: {info.get('name') or 'desconocida'}   "
                  f"driver {info.get('driver') or '?'}")
@@ -259,7 +284,8 @@ class App(tk.Tk):
         elif model["misnamed"]:
             self.log(f"Posible modelo NR con nombre cambiado: {model['misnamed']}")
         else:
-            self.log("Modelo NR: no encontrado en este sistema.")
+            self.log("Modelo NR: no esta en el disco. NVIDIA lo mete en el "
+                     "instalador del driver pero no lo copia al instalarlo.")
 
         self.log("Buscando los nvngx_dlss*.dll mas nuevos del PC...")
         self.harvest = scan.harvest_dlss_dlls()
@@ -281,17 +307,18 @@ class App(tk.Tk):
 
         problems = []
         if not ok50:
-            problems.append("El modelo de Neural Rendering solo corre en RTX 50. "
-                            "En otra tarjeta puedes usar el resto de OptiScaler, "
-                            "pero DLSS 5 no arrancara.")
+            problems.append("El modelo oficial solo corre en RTX 50. En otra "
+                            "tarjeta hace falta un nvngx_dlssnr.dll modificado.")
+        if model_mod.driver_ok(drv) is False:
+            problems.append(f"Driver {drv}: por debajo del minimo 616.56.")
         if not has_model:
-            problems.append("Falta nvngx_dlssnr.dll (unos 165 MB). Llega con el "
-                            "driver Game Ready de DLSS 5; actualiza y vuelve a "
-                            "pulsar \"Recomprobar sistema\". Se puede instalar "
-                            "todo lo demas ya y anadir el modelo despues.")
+            problems.append(
+                "Falta nvngx_dlssnr.dll (~165 MB). No es que tu driver no lo "
+                "traiga: NVIDIA lo empaqueta en el instalador pero no lo copia "
+                "al disco. Pulsa \"Buscar modelo\" para extraerlo.")
         self.warn_lbl.configure(
             text=("  ".join(problems) if problems else
-                  "Sistema listo: RTX 50 y modelo de Neural Rendering presentes."),
+                  "Sistema listo: RTX 50, driver al dia y modelo presente."),
             foreground=("#e0a325" if problems else ACCENT))
 
     # -- biblioteca --------------------------------------------------------
@@ -434,9 +461,15 @@ class App(tk.Tk):
         self.log("")
         self.log(f"=== {g.name} ===")
         self.log(f"Destino: {g.exe_dir}")
-        if not neural:
-            self.log("Neural Rendering no aplica aqui; se instala OptiScaler "
-                     "para cambiar el upscaler.")
+
+        # Se resuelve el modelo una sola vez y se reutiliza desde la cache, en
+        # vez de rebuscarlo por todo el disco en cada juego.
+        model_path = None
+        if neural:
+            found = model_mod.find_existing()
+            model_path = found["path"] or found["misnamed"]
+            if model_path:
+                model_path = model_mod.cache_model(model_path, log=self.log)
 
         kind = "dlssnr" if neural else "stable"
 
@@ -444,6 +477,7 @@ class App(tk.Tk):
             self.q.put(("prog", (frac, text)))
 
         manifest = apply_mod.install(g, preset=preset, kind=kind, neural=neural,
+                                     model_path=model_path,
                                      progress=prog, log=self.log)
 
         if self.harvest and g.dll_paths:
@@ -457,10 +491,18 @@ class App(tk.Tk):
         self.games[g2.key] = g2
         self.q.put(("row", g2))
 
-        tail = ("Arranca el juego y pulsa Insert para el overlay de OptiScaler."
-                if manifest.get("modelo") or not neural else
-                "Instalado, pero falta nvngx_dlssnr.dll. Actualiza el driver y "
-                "vuelve a aplicar para copiar el modelo.")
+        if manifest.get("modelo"):
+            tail = ("Arranca el juego, pulsa Insert para el overlay y busca "
+                    "\"DLSS Neural Rendering\".\n\n"
+                    "F10 enciende y apaga el paso sin abrir el menu: es la "
+                    "forma honesta de ver si esta haciendo algo.\n\n"
+                    "En el overlay, prueba Colour -> \"Hybrid proxy + composed\": "
+                    "es lo mejor de v0.2.0 y no se puede dejar puesto desde aqui "
+                    "porque no existe como clave del INI.")
+        else:
+            tail = ("OptiScaler queda instalado y funcionando, pero el paso "
+                    "neuronal esta apagado: falta nvngx_dlssnr.dll.\n\n"
+                    "Pulsa \"Buscar modelo\" y luego vuelve a aplicar aqui.")
         self.q.put(("info", f"Hecho.\n\n{tail}"))
 
     def _revert(self, g: scan.Game):

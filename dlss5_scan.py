@@ -736,40 +736,41 @@ def _classify(g: Game) -> None:
     dx12 = "dx12" in g.apis
     dx11 = "dx11" in g.apis
     vk = "vulkan" in g.apis
-    # Que no hayamos podido demostrar la API no es prueba de que sea Vulkan.
-    # Solo se descarta un juego por Vulkan cuando Vulkan es lo unico visible.
     vulkan_only = vk and not (dx12 or dx11)
-    direct_x = dx12 or dx11 or not g.apis
 
     if not g.exe:
         g.tier = "D"
         g.verdict = "No se encontro ningun ejecutable."
         return
 
-    if has_dlss and vulkan_only:
-        g.tier = "C"
-        g.verdict = "Juego Vulkan: Neural Rendering no esta implementado."
-        g.notes.append("OptiScaler si puede cambiar el upscaler, pero NR no.")
-    elif has_dlss and direct_x:
+    # Desde v0.2.0 el paso neuronal lee las entradas de CUALQUIER upscaler
+    # temporal, no solo de DLSS, y Vulkan pasó a estar soportado de forma
+    # nativa. Lo unico que sigue siendo condicion indispensable es que exista
+    # un upscaler del que sacar depth y motion vectors.
+    if has_dlss:
         g.tier = "A"
         g.verdict = "DLSS 5 Neural Rendering aplicable."
-        if dx11 and not dx12:
-            g.notes.append("DX11: pasa por el puente D3D11-on-D3D12, algo mas lento.")
-        if not g.apis:
-            g.notes.append("No se pudo confirmar la API grafica; si el juego "
-                           "resulta ser Vulkan, el paso no arrancara.")
-    elif has_other and vulkan_only:
-        g.tier = "C"
-        g.verdict = "Vulkan con FSR/XeSS: solo cambio de upscaler."
-    elif has_other and direct_x:
+    elif has_other:
         g.tier = "B"
-        g.verdict = "Sin DLSS nativo: OptiScaler puede inyectarlo."
-        g.notes.append("Hace falta aportar nvngx_dlss.dll. NR puede no activarse.")
+        g.verdict = "Neural Rendering aplicable sobre FSR/XeSS."
+        g.notes.append("Desde v0.2.0 el paso no necesita DLSS: se engancha a "
+                       "las entradas de FSR o XeSS igual de bien.")
     else:
         g.tier = "D"
         g.verdict = "Sin upscaler temporal: no hay de donde sacar los vectores."
-        g.notes.append("DLSS necesita depth y motion vectors del motor. "
-                       "Sin ellos no hay nada que interceptar.")
+        g.notes.append("El paso necesita depth y motion vectors, y los toma de "
+                       "los que el juego ya entrega a su upscaler. Sin upscaler "
+                       "no hay nada que interceptar.")
+        return
+
+    if dx11 and not dx12:
+        g.notes.append("DX11: pasa por el puente D3D11-on-D3D12, que en v0.2.0 "
+                       "ya admite DLSS directamente.")
+    if vulkan_only:
+        g.notes.append("Vulkan nativo: soportado desde v0.2.0.")
+    if not g.apis:
+        g.notes.append("No se pudo confirmar la API grafica, pero las tres "
+                       "(DX11, DX12 y Vulkan) estan soportadas.")
 
     if g.anticheat:
         g.notes.append("ANTICHEAT: " + ", ".join(sorted(g.anticheat)) +

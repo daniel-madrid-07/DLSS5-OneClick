@@ -27,31 +27,44 @@ buffers de iluminación. Un juego que no entrega esos datos no tiene nada que
 darle al modelo.
 
 El atajo que usa esta herramienta —el fork de OptiScaler— no busca esos buffers
-en el motor: **intercepta los que el juego ya le pasa a DLSS cada fotograma**
-(depth y motion vectors). Por eso funciona en cualquier título con DLSS sin
-trabajo por juego, y por eso no hace absolutamente nada en un juego sin DLSS.
-Con menos guías que la integración oficial, el resultado tampoco es idéntico.
+en el motor: **intercepta los que el juego ya le pasa a su upscaler cada
+fotograma** (depth y motion vectors). Por eso funciona en cualquier título con
+upscaler sin trabajo por juego, y por eso no hace absolutamente nada en un juego
+que no tenga ninguno. Con menos guías que la integración oficial, el resultado
+tampoco es idéntico.
+
+Desde **v0.2.0** (3 sept 2026) el paso ya no exige DLSS: se engancha igual a FSR
+y a XeSS, y Vulkan pasó a estar soportado de forma nativa.
 
 ## Requisitos reales
 
 | | |
 |---|---|
-| GPU | **RTX 50** (Blackwell). El modelo no corre en nada anterior |
-| Driver | Uno que incluya `nvngx_dlssnr.dll` (~165 MB) |
-| Juego | Con **DLSS**, en **DX12** o **DX11**. Vulkan no está implementado |
+| GPU | **RTX 50** (Blackwell). En RTX 20/30/40 hace falta un DLL modificado |
+| Driver | **616.56** o superior |
+| Modelo | `nvngx_dlssnr.dll` (~165 MB) — ver abajo, es la parte que atasca |
+| Juego | Con **cualquier upscaler temporal** (DLSS, FSR o XeSS). DX11, DX12 y Vulkan |
 
-La herramienta comprueba las tres cosas al arrancar y te dice cuál falta. Si
-todavía no tienes el driver con el modelo, puedes instalar todo lo demás y
-añadirlo después: el aviso te lo recuerda.
+### El modelo es el problema, no el driver
 
-## Los cuatro niveles
+Puedes tener el 616.64 instalado y no encontrar `nvngx_dlssnr.dll` por ningún
+lado. No es un fallo tuyo: **NVIDIA lo empaqueta dentro del instalador del
+driver pero no lo copia al disco al instalarlo**. Tampoco hay interruptor en la
+NVIDIA App — NVIDIA confirmó que no habría override por juego.
 
-Al analizar tu biblioteca cada juego cae en uno:
+Por eso existe el botón **Buscar modelo**. Baja el instalador completo de
+GeForce desde nvidia.com/Download, déjalo en Descargas **sin ejecutarlo**, y
+púlsalo: lo abre con 7-Zip, saca el DLL y lo guarda en caché. Una sola vez para
+todos los juegos.
 
-- **Sí** — tiene DLSS nativo sobre DirectX. Neural Rendering se aplica.
-- **Parcial** — tiene FSR o XeSS pero no DLSS. OptiScaler puede inyectar DLSS,
-  aunque hay que aportar `nvngx_dlss.dll` y el paso neuronal puede no arrancar.
-- **Solo upscaler** — Vulkan. Se puede cambiar el upscaler, pero NR no existe ahí.
+El programa nunca descarga el modelo de repositorios de terceros. Es de NVIDIA,
+y los sitios que lo reempaquetan son justo los que conviene evitar.
+
+## Los niveles
+
+- **Sí (DLSS)** — tiene DLSS. El caso ideal.
+- **Sí (FSR/XeSS)** — sin DLSS, pero desde v0.2.0 el paso se engancha igual de
+  bien a las entradas de FSR o XeSS.
 - **No** — sin upscaler temporal. No hay depth ni motion vectors que
   interceptar. No hay truco que valga.
 
@@ -65,7 +78,8 @@ Al analizar tu biblioteca cada juego cae en uno:
    (`dxgi.dll`, y si está ocupado el siguiente que quede libre).
 4. Escribe la sección `[DlssNr]` del INI con el ajuste elegido, respetando los
    comentarios del archivo.
-5. Copia el modelo `nvngx_dlssnr.dll` desde tu driver, si lo encuentra.
+5. Copia el modelo `nvngx_dlssnr.dll` desde la caché (hace falta una copia por
+   juego: no existe ubicación compartida).
 6. Actualiza los `nvngx_dlss*.dll` del juego si tienes una versión más nueva en
    otro sitio del PC. No descarga DLL de NVIDIA de ningún sitio raro: usa los
    que ya tienes.
@@ -85,10 +99,21 @@ Salen de los controles reales del fork:
 | Suave | Respeta el arte original. Solo la luz lleva la opinión del modelo |
 | Equilibrado | El recomendado |
 | Máximo detalle | Empuja más allá de lo que el modelo pide. Se nota |
+| Supersampling | El modelo corre **por encima** de nativo y se promedia de vuelta con Lanczos3: menos ruido. Caro |
 | Rendimiento | El modelo trabaja a media resolución. El coste cae al cuadrado |
 
-Si quieres ver si el paso hace algo, pon `DebugView=3` en el INI: un gris plano
-significa que no está tocando nada.
+**F10** enciende y apaga el paso dentro del juego sin abrir el menú. Es la forma
+honesta de comprobar si está haciendo algo — a ojo y en movimiento se
+autoengaña uno con facilidad. `DebugView=3` en el INI muestra lo que ha
+cambiado amplificado: un gris plano significa que no toca nada.
+
+### Lo que hay que tocar a mano
+
+La mejora grande de v0.2.0 es el **proxy reversible**, y su modo recomendado es
+*Hybrid proxy + composed*. No se puede dejar preconfigurado desde aquí porque
+**no existe como clave del INI**: vive solo en el overlay. Ábrelo con Insert,
+sección Colour, y cámbialo ahí. El anclaje multipunto del punto de blanco y el
+"Hold frame" para comparar ajustes tampoco tienen clave; también son de overlay.
 
 ## Anticheat
 
@@ -116,7 +141,8 @@ Esta herramienta solo descarga de los repos oficiales listados en
 | `dlss5.py` | Interfaz |
 | `dlss5_scan.py` | Detección: PE, motor, API, upscalers, GPU, anticheat |
 | `dlss5_apply.py` | Descarga, instalación, INI y marcha atrás |
-| `pruebas.py` | Comprueba que revertir no deja rastro |
+| `dlss5_model.py` | Conseguir `nvngx_dlssnr.dll` del instalador del driver |
+| `pruebas.py` | 31 comprobaciones, incluida la de que revertir no deja rastro |
 
 ## Créditos
 
