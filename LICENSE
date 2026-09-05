@@ -19,17 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-This licence covers only the code in this repository.
-
-It does not cover the software this tool downloads at run time, which keeps its
-own licence and is never redistributed here:
-
-  * OptiScaler and the OptiScaler_DLSSNR fork -- GPL-3.0.
-    Downloaded from their own GitHub releases when you press Apply.
-  * RenoDX -- MIT. Its colour composition is used by the fork, not by this code.
-  * nvngx_dlssnr.dll and the other NVIDIA NGX libraries -- proprietary, NVIDIA.
-    This tool never downloads or redistributes them; it only copies files that
-    are already on your machine.

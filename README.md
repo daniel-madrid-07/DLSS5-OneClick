@@ -230,7 +230,10 @@ propios releases cuando pulsas Aplicar.
 
 ## Licencia
 
-MIT — ver [LICENSE](LICENSE). Cubre solo el código de este repositorio; el
-software que descarga en tiempo de ejecución conserva su propia licencia.
+MIT — ver [LICENSE](LICENSE). Cubre solo el código de este repositorio.
+
+El software que la herramienta descarga en tiempo de ejecución conserva su
+propia licencia y no se redistribuye aquí; los detalles, componente por
+componente, están en [NOTICE.md](NOTICE.md).
 
 No está afiliado a NVIDIA ni al equipo de OptiScaler.
