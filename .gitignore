@@ -27,3 +27,7 @@ OptiScaler*
 _DLSS5_backup/
 _research/
 cache/
+
+# Salida de build.py: el .exe va en la release de GitHub, no en el codigo.
+dist/
+*.spec
