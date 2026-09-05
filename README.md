@@ -92,11 +92,16 @@ como "NVIDIA DLSSNR"), y a día de hoy ese es el único que lo trae.
 > el mismo artículo pero solo reciben DLSS 4.5. **No llevan el modelo**, y la
 > demo gratuita de Onimusha tampoco. Instalarlos para esto es tirar 100 GB.
 
-El botón **Buscar modelo** mira, por este orden: la caché, tus juegos
-instalados, y por último cualquier instalador de driver que tengas suelto. Basta
-con tener el juego instalado — no hay que jugarlo. El DLL se copia a
-`%LOCALAPPDATA%\DLSS5\modelo` y de ahí a todos los demás juegos, así que puedes
-desinstalar el juego origen después.
+> [!TIP]
+> **Si ya tienes el archivo, déjalo junto al `.exe` y ya está.** Se detecta
+> solo al arrancar, sin pulsar nada. La primera instalación lo copia a la caché,
+> así que después puedes mover o borrar el ejecutable y seguirá funcionando.
+
+El botón **Buscar modelo** mira, por este orden: **la carpeta del propio
+programa**, la caché, tus juegos instalados, y por último cualquier instalador
+de driver que tengas suelto. Basta con tener el juego instalado — no hay que
+jugarlo. El DLL se copia a `%LOCALAPPDATA%\DLSS5\modelo` y de ahí a todos los
+demás juegos, así que puedes desinstalar el juego origen después.
 
 **El programa nunca descarga el modelo de terceros.** Es de NVIDIA, y los sitios
 que lo reempaquetan son justo los que conviene evitar.

@@ -153,6 +153,39 @@ def main() -> int:
               ss.get("ScalingDownscaler") == "4", str(ss.get("ScalingDownscaler")))
         check("busca el modelo en los juegos, no solo en el driver",
               callable(getattr(model_mod, "find_in_games", None)))
+
+        # El flujo del usuario nuevo: deja el DLL junto al programa y ya.
+        # app_dir() tiene que ser la carpeta del .exe, no la del descomprimido
+        # temporal de PyInstaller.
+        check("app_dir apunta a una carpeta real",
+              os.path.isdir(model_mod.app_dir()), model_mod.app_dir())
+        # Se comprueba de verdad: un archivo del tamano del modelo colocado en
+        # una carpeta pasada como raiz extra tiene que encontrarse.
+        # Archivo disperso: ocupa el tamano declarado sin escribir 100 MB.
+        # Se hace deliberadamente MAS GRANDE que cualquier copia real que pueda
+        # haber en esta maquina, porque find_existing se queda con la mayor.
+        falso = os.path.join(root, "nvngx_dlssnr.dll")
+        grande = 400 << 20
+        with open(falso, "wb") as f:
+            f.seek(grande - 1)
+            f.write(b"\0")
+        hallado = model_mod.find_existing(extra_roots=[root])
+        check("encuentra un modelo dejado en una carpeta",
+              hallado["path"] and os.path.normcase(hallado["path"])
+              == os.path.normcase(falso), str(hallado["path"]))
+        os.remove(falso)
+
+        # Y uno por debajo del minimo no debe colarse como modelo.
+        pequeno = os.path.join(root, "nvngx_dlssnr.dll")
+        with open(pequeno, "wb") as f:
+            f.write(b"\0" * 1024)
+        tras = model_mod.find_existing(extra_roots=[root])
+        check("descarta archivos demasiado pequenos para ser el modelo",
+              os.path.normcase(str(tras["path"])) != os.path.normcase(pequeno),
+              str(tras["path"]))
+        os.remove(pequeno)
+        check("la ayuda dice que basta con dejarlo al lado",
+              "junto al programa" in model_mod.help_text("616.64"))
         check("la ayuda no manda a por el driver",
               "NO viene en el driver" in model_mod.help_text("616.64"))
         check("la ayuda nombra los juegos que si lo traen",
