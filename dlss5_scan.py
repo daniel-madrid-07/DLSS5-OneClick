@@ -1,9 +1,9 @@
 """
-Deteccion: hardware NVIDIA, ejecutables de juego, API grafica y upscalers presentes.
+Detection: NVIDIA hardware, game executables, graphics API and upscalers present.
 
-Todo con la libreria estandar de Python. Nada de pip, nada de binarios externos.
-El parseo de PE es propio porque 'pefile' seria una dependencia mas para leer
-cuatro campos de una cabecera.
+Standard library only. No pip, no external binaries. The PE parsing is written
+here because 'pefile' would be one more dependency just to read four header
+fields.
 """
 
 from __future__ import annotations
@@ -16,10 +16,10 @@ import subprocess
 from dataclasses import dataclass, field
 
 # --------------------------------------------------------------------------
-# Marcadores de archivos
+# File markers
 # --------------------------------------------------------------------------
 
-# DLL -> (familia, etiqueta legible)
+# DLL -> (family, readable label)
 UPSCALER_DLLS = {
     "nvngx_dlss.dll":       ("dlss",    "DLSS Super Resolution"),
     "nvngx_dlssg.dll":      ("dlssg",   "DLSS Frame Generation"),
@@ -38,11 +38,11 @@ UPSCALER_DLLS = {
     "amdxcffx64.dll":       ("fsr4",    "FSR 4"),
 }
 
-# Nombres que OptiScaler puede adoptar para que el juego lo cargue solo.
+# Names OptiScaler can take so the game loads it on its own.
 PROXY_NAMES = ["dxgi.dll", "winmm.dll", "version.dll", "dbghelp.dll",
                "d3d12.dll", "wininet.dll", "winhttp.dll"]
 
-# Instaladores y utilidades: nunca contienen el ejecutable ni DLL de upscaler.
+# Installers and utilities: never hold the executable or an upscaler DLL.
 SKIP_DIRS = {
     "_commonredist", "commonredist", "redist", "directx", "dotnet", "vcredist",
     "easyanticheat", "easyanticheat_eos", "battleye", "punkbuster",
@@ -50,9 +50,9 @@ SKIP_DIRS = {
     "installers", "_dlss5_backup",
 }
 
-# Carpetas de contenido. Se podan por velocidad, no por relevancia: pueden
-# tener cientos de miles de archivos y jamas un DLL de upscaler.
-# 'Engine' NO esta aqui: Unreal guarda ahi nvngx_dlss.dll.
+# Content folders. Pruned for speed, not relevance: they can hold hundreds
+# of thousands of files and never an upscaler DLL.
+# 'Engine' is NOT here: Unreal keeps nvngx_dlss.dll inside it.
 CONTENT_DIRS = {
     "content", "paks", "movies", "audio", "sounds", "music", "videos",
     "textures", "localization", "intermediate", "saved", "logs", "crashes",
@@ -60,7 +60,7 @@ CONTENT_DIRS = {
     "media", "cinematics", "levels", "maps", "meshes", "animations",
 }
 
-# Fragmentos de nombre que delatan un lanzador o una herramienta, no el juego.
+# Name fragments that give away a launcher or a tool, not the game.
 LAUNCHER_HINTS = (
     "launcher", "crashhandler", "crashreport", "crashpad", "unitycrashhandler",
     "setup", "install", "uninstall", "unins", "eosbootstrapper", "bootstrap",
@@ -71,8 +71,8 @@ LAUNCHER_HINTS = (
     "steamerrorreporter", "benchmark", "editor", "shipping_bootstrap",
 )
 
-# Se comprueban en orden: del marcador mas especifico al mas generico, porque
-# '/binaries/win64/' aparece tambien en juegos que no son Unreal.
+# Checked in order, most specific marker first, because '/binaries/win64/'
+# also shows up in games that are not Unreal.
 ENGINE_MARKERS = [
     ("RE Engine",     ("re_chunk_000.pak",)),
     ("REDengine",     ("r6/", "archive/pc/", "red4ext/")),
@@ -85,7 +85,7 @@ ENGINE_MARKERS = [
     ("Unreal Engine", ("engine/binaries", "engine/config", "/binaries/win64/")),
 ]
 
-# Anticheats que reaccionan mal a un DLL nuevo junto al ejecutable.
+# Anti-cheats that react badly to a new DLL next to the executable.
 ANTICHEAT_MARKERS = {
     "easyanticheat":       "Easy Anti-Cheat",
     "easyanticheat_eos":   "Easy Anti-Cheat (EOS)",
@@ -101,14 +101,14 @@ ANTICHEAT_MARKERS = {
 
 
 # --------------------------------------------------------------------------
-# Lectura de PE (Portable Executable)
+# PE (Portable Executable) reading
 # --------------------------------------------------------------------------
 
 MACHINE = {0x014C: "x86", 0x8664: "x64", 0xAA64: "arm64"}
 
 
 def pe_info(path: str) -> dict:
-    """Arquitectura y DLLs importadas de un .exe/.dll. Solo lee cabeceras."""
+    """Architecture and imported DLLs of an .exe/.dll. Headers only."""
     out = {"ok": False, "arch": None, "imports": set(), "subsystem": None}
     try:
         with open(path, "rb") as f:
@@ -142,10 +142,10 @@ def pe_info(path: str) -> dict:
                 out["ok"] = True
                 return out
 
-            f.seek(dd_off + 8)              # entrada 1 = tabla de importaciones
+            f.seek(dd_off + 8)              # entry 1 = import table
             imp_rva, _imp_size = struct.unpack("<II", f.read(8))
 
-            # Tabla de secciones, para traducir RVA -> offset en disco.
+            # Section table, to translate RVA -> file offset.
             sections = []
             f.seek(opt_off + opt_size)
             for _ in range(nsec):
@@ -171,7 +171,7 @@ def pe_info(path: str) -> dict:
             if desc_off is None:
                 return out
 
-            for i in range(1024):           # tope de cordura
+            for i in range(1024):           # sanity cap
                 f.seek(desc_off + i * 20)
                 desc = f.read(20)
                 if len(desc) < 20 or desc == b"\0" * 20:
@@ -190,16 +190,16 @@ def pe_info(path: str) -> dict:
 
 
 def file_version(path: str) -> str | None:
-    """Version de archivo leyendo VS_FIXEDFILEINFO directamente de los bytes.
+    """File version, read straight from the bytes of VS_FIXEDFILEINFO.
 
-    Busca la firma 0xFEEF04BD, que es unica y esta siempre al inicio de esa
-    estructura. Mas barato que montar un parser de recursos completo.
+    Looks for signature 0xFEEF04BD, which is unique and always sits at the
+    start of that structure. Cheaper than a full resource parser.
     """
     SIG = b"\xbd\x04\xef\xfe"
     try:
         size = os.path.getsize(path)
         with open(path, "rb") as f:
-            # Los recursos suelen vivir al final; se mira ahi primero.
+            # Resources usually live at the end, so look there first.
             for start in ((max(0, size - 4 * 1024 * 1024), size), (0, size)):
                 f.seek(start[0])
                 remaining = start[1] - start[0]
@@ -236,7 +236,7 @@ def version_tuple(v: str | None):
 
 
 def contains_text(path: str, needle: str, limit_mb: int = 64) -> bool:
-    """Busca una cadena (ASCII y UTF-16LE) dentro de un binario."""
+    """Searches a binary for a string, both ASCII and UTF-16LE."""
     a = needle.encode("ascii", "ignore")
     w = needle.encode("utf-16-le")
     try:
@@ -258,11 +258,10 @@ def contains_text(path: str, needle: str, limit_mb: int = 64) -> bool:
 
 
 def scan_strings(path: str, needles: list[str], limit_mb: int = 48) -> set[str]:
-    """Busca varias cadenas en un binario en una sola pasada.
+    """Searches a binary for several strings in a single pass.
 
-    Los motores modernos cargan d3d12.dll en tiempo de ejecucion, asi que la
-    tabla de importaciones miente por omision: el nombre solo aparece como
-    literal dentro del .exe.
+    Modern engines load d3d12.dll at run time, so the import table lies by
+    omission: the name only appears as a literal inside the .exe.
     """
     found: set[str] = set()
     pats = [(n, n.encode("ascii", "ignore"), n.encode("utf-16-le"))
@@ -288,7 +287,7 @@ def scan_strings(path: str, needles: list[str], limit_mb: int = 48) -> set[str]:
 
 
 def is_optiscaler(path: str) -> bool:
-    """True si este DLL es en realidad OptiScaler renombrado."""
+    """True if this DLL is really OptiScaler under another name."""
     try:
         if os.path.getsize(path) < 2 << 20:
             return False
@@ -298,7 +297,7 @@ def is_optiscaler(path: str) -> bool:
 
 
 # --------------------------------------------------------------------------
-# Sistema: GPU, driver y modelo de Neural Rendering
+# System: GPU, driver and Neural Rendering model
 # --------------------------------------------------------------------------
 
 RTX50_RE = re.compile(r"RTX\s*50\d0", re.I)
@@ -321,7 +320,7 @@ def _run(cmd: list[str], timeout: int = 12) -> str:
 
 
 def gpu_info() -> dict:
-    """Nombre de GPU y version de driver. nvidia-smi si esta; si no, WMI."""
+    """GPU name and driver version. nvidia-smi if present, else WMI."""
     info = {"name": None, "driver": None, "rtx50": False, "vendor": None}
 
     out = _run(["nvidia-smi", "--query-gpu=name,driver_version",
@@ -350,11 +349,11 @@ def gpu_info() -> dict:
 
 
 def find_dlssnr_model() -> dict:
-    """Localiza nvngx_dlssnr.dll en el sistema.
+    """Locates nvngx_dlssnr.dll on the system.
 
-    Tambien detecta la trampa que avisa el README del fork: un nvngx_dlssd.dll
-    de ~165 MB no es Ray Reconstruction, es el modelo de Neural Rendering con
-    el nombre cambiado.
+    Also catches the trap the fork README warns about: a ~165 MB
+    nvngx_dlssd.dll is not Ray Reconstruction, it is the Neural Rendering
+    model under the wrong name.
     """
     result = {"path": None, "size": 0, "version": None, "misnamed": None}
 
@@ -372,7 +371,7 @@ def find_dlssnr_model() -> dict:
         if not os.path.isdir(root):
             continue
         for dirpath, dirnames, filenames in os.walk(root):
-            # No bajar mas de 4 niveles por debajo de la raiz de busqueda.
+            # Do not descend more than 4 levels below the search root.
             depth = dirpath[len(root):].count(os.sep)
             if depth >= 4:
                 dirnames[:] = []
@@ -391,10 +390,10 @@ def find_dlssnr_model() -> dict:
 
 
 def harvest_dlss_dlls() -> dict:
-    """Busca la copia mas nueva de cada nvngx_dlss*.dll ya instalada en el PC.
+    """Finds the newest copy of each nvngx_dlss*.dll already on this PC.
 
-    Sirve para actualizar un juego sin descargar nada de internet: los DLL ya
-    estan en el driver o en otros juegos.
+    Lets a game be upgraded without downloading anything: the DLLs are
+    already in the driver or in other games.
     """
     best: dict[str, tuple] = {}
     roots = [r"C:\Windows\System32\DriverStore\FileRepository",
@@ -428,7 +427,7 @@ def harvest_dlss_dlls() -> dict:
 
 
 # --------------------------------------------------------------------------
-# Bibliotecas de juegos instaladas
+# Installed game libraries
 # --------------------------------------------------------------------------
 
 def steam_libraries() -> list[str]:
@@ -474,7 +473,7 @@ def steam_libraries() -> list[str]:
 
 
 def installed_games() -> list[dict]:
-    """Carpetas de juego de Steam, Epic y GOG. Nombre + ruta, sin analizar aun."""
+    """Steam, Epic and GOG game folders. Name and path, not analysed yet."""
     found: list[dict] = []
     seen: set[str] = set()
 
@@ -485,7 +484,7 @@ def installed_games() -> list[dict]:
         seen.add(key)
         found.append({"name": name, "path": os.path.normpath(path), "store": store})
 
-    # Steam: los .acf dan el nombre exacto y la carpeta.
+    # Steam: the .acf files give the exact name and folder.
     for lib in steam_libraries():
         apps = os.path.join(lib, "steamapps")
         if not os.path.isdir(apps):
@@ -509,7 +508,7 @@ def installed_games() -> list[dict]:
                 add(name.group(1), os.path.join(apps, "common", folder.group(1)),
                     "Steam")
 
-    # Epic: un .item JSON por juego.
+    # Epic: one JSON .item per game.
     epic = r"C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests"
     if os.path.isdir(epic):
         for fn in os.listdir(epic):
@@ -524,7 +523,7 @@ def installed_games() -> list[dict]:
             except Exception:
                 pass
 
-    # GOG Galaxy: una clave de registro por juego.
+    # GOG Galaxy: one registry key per game.
     try:
         import winreg
         for key in (r"SOFTWARE\WOW6432Node\GOG.com\Games",
@@ -550,7 +549,7 @@ def installed_games() -> list[dict]:
 
 
 # --------------------------------------------------------------------------
-# Analisis de una carpeta de juego
+# Analysing a game folder
 # --------------------------------------------------------------------------
 
 @dataclass
@@ -558,15 +557,15 @@ class Game:
     name: str
     root: str
     store: str = "manual"
-    exe: str | None = None            # ruta completa al ejecutable elegido
-    exe_dir: str | None = None        # donde van los DLL de OptiScaler
+    exe: str | None = None            # full path to the chosen executable
+    exe_dir: str | None = None        # where the OptiScaler DLLs go
     arch: str | None = None
     engine: str | None = None
     apis: set = field(default_factory=set)         # {'dx12','dx11','vulkan'}
-    upscalers: dict = field(default_factory=dict)  # familia -> etiqueta
-    dll_paths: dict = field(default_factory=dict)  # nombre dll -> ruta
+    upscalers: dict = field(default_factory=dict)  # family -> label
+    dll_paths: dict = field(default_factory=dict)  # dll name -> path
     dlss_version: str | None = None
-    installed_proxy: str | None = None             # OptiScaler ya presente
+    installed_proxy: str | None = None             # OptiScaler already present
     anticheat: set = field(default_factory=set)
     tier: str = "D"
     verdict: str = ""
@@ -578,9 +577,9 @@ class Game:
 
 
 def _walk_game(root: str, max_depth: int = 9, max_files: int = 200_000):
-    """Recorrido acotado. Devuelve (exes, dlls_por_nombre, rutas_relativas).
+    """Bounded walk. Returns (exes, dlls_by_name, relative_paths).
 
-    La profundidad tiene que llegar a 9 porque Unreal esconde el DLL en
+    Depth has to reach 9 because Unreal hides the DLL in
     Engine/Plugins/Runtime/Nvidia/DLSS/Binaries/ThirdParty/Win64.
     """
     exes: list[tuple[str, int]] = []
@@ -597,8 +596,8 @@ def _walk_game(root: str, max_depth: int = 9, max_files: int = 200_000):
         if depth >= max_depth:
             dirnames[:] = []
 
-        # El anticheat se anota antes de podar: sus carpetas estan en SKIP_DIRS
-        # justamente porque no queremos recorrerlas, pero si saber que existen.
+        # Anti-cheat is noted before pruning: its folders are in SKIP_DIRS
+        # precisely because we do not want to walk them, only to know they exist.
         for d in dirnames:
             hit = ANTICHEAT_MARKERS.get(d.lower())
             if hit:
@@ -652,18 +651,18 @@ def _score_exe(path: str, size: int, root: str) -> float:
 
 
 def analyze(root: str, name: str | None = None, store: str = "manual") -> Game:
-    """Analiza una carpeta de juego y decide que se le puede aplicar."""
+    """Analyses a game folder and decides what can be applied to it."""
     g = Game(name=name or os.path.basename(os.path.normpath(root)),
              root=os.path.normpath(root), store=store)
 
     if not os.path.isdir(root):
-        g.verdict = "La carpeta no existe."
+        g.verdict = "That folder does not exist."
         return g
 
     exes, dlls, rels, anticheat = _walk_game(root)
     g.anticheat = anticheat
 
-    # --- ejecutable principal -------------------------------------------
+    # --- main executable -------------------------------------------
     if exes:
         ranked = sorted(exes, key=lambda e: _score_exe(e[0], e[1], root),
                         reverse=True)
@@ -681,14 +680,14 @@ def analyze(root: str, name: str | None = None, store: str = "manual") -> Game:
         if any(d.startswith("d3d9") for d in imports):
             g.apis.add("dx9")
 
-    # Las importaciones se quedan cortas: casi todos los motores cargan
-    # d3d12.dll con LoadLibrary, asi que hay que mirar tambien las cadenas del
-    # binario y lo que haya suelto en la carpeta.
+    # Imports fall short: almost every engine loads d3d12.dll with
+    # LoadLibrary, so the binary strings and whatever sits in the folder have
+    # to be checked too.
     if "d3d12core.dll" in dlls or "d3d12.dll" in dlls:
         g.apis.add("dx12")
     scan_target = g.exe
     if "unityplayer.dll" in dlls:
-        scan_target = dlls["unityplayer.dll"]     # el .exe de Unity es un cascaron
+        scan_target = dlls["unityplayer.dll"]     # the Unity .exe is a shell
     if scan_target and "dx12" not in g.apis:
         hits = scan_strings(scan_target,
                             ["d3d12.dll", "d3d11.dll", "vulkan-1.dll"])
@@ -697,19 +696,19 @@ def analyze(root: str, name: str | None = None, store: str = "manual") -> Game:
             if needle in hits:
                 g.apis.add(api)
 
-    # DX9 solo importa si es lo unico que hay; con DX11/12 delante es ruido de
-    # compatibilidad que ensucia la ficha.
+    # DX9 only matters when it is all there is; behind DX11/12 it is just
+    # compatibility noise cluttering the report.
     if g.apis & {"dx11", "dx12"}:
         g.apis.discard("dx9")
 
-    # --- motor ------------------------------------------------------------
+    # --- engine ------------------------------------------------------------
     joined = "\n".join(rels)
     for label, markers in ENGINE_MARKERS:
         if any(m in joined for m in markers):
             g.engine = label
             break
 
-    # --- upscalers presentes ---------------------------------------------
+    # --- upscalers present ---------------------------------------------
     for dll_name, (family, label) in UPSCALER_DLLS.items():
         if dll_name in dlls:
             g.upscalers[family] = label
@@ -718,7 +717,7 @@ def analyze(root: str, name: str | None = None, store: str = "manual") -> Game:
     if "nvngx_dlss.dll" in g.dll_paths:
         g.dlss_version = file_version(g.dll_paths["nvngx_dlss.dll"])
 
-    # --- OptiScaler ya instalado -----------------------------------------
+    # --- OptiScaler already installed -----------------------------------------
     for proxy in PROXY_NAMES:
         p = dlls.get(proxy)
         if p and is_optiscaler(p):
@@ -730,7 +729,7 @@ def analyze(root: str, name: str | None = None, store: str = "manual") -> Game:
 
 
 def _classify(g: Game) -> None:
-    """Asigna nivel y veredicto. Sin optimismo: si no se puede, se dice."""
+    """Assigns tier and verdict. No optimism: if it cannot be done, say so."""
     has_dlss = "dlss" in g.upscalers or "sl" in g.upscalers
     has_other = any(k in g.upscalers for k in ("fsr", "xess", "fsr4"))
     dx12 = "dx12" in g.apis
@@ -740,47 +739,47 @@ def _classify(g: Game) -> None:
 
     if not g.exe:
         g.tier = "D"
-        g.verdict = "No se encontro ningun ejecutable."
+        g.verdict = "No executable found."
         return
 
-    # Desde v0.2.0 el paso neuronal lee las entradas de CUALQUIER upscaler
-    # temporal, no solo de DLSS, y Vulkan pasó a estar soportado de forma
-    # nativa. Lo unico que sigue siendo condicion indispensable es que exista
-    # un upscaler del que sacar depth y motion vectors.
+    # Since v0.2.0 the neural pass reads the inputs of ANY temporal upscaler,
+    # not just DLSS, and Vulkan became natively supported. The one remaining
+    # hard requirement is that some upscaler exists to take depth and motion
+    # vectors from.
     if has_dlss:
         g.tier = "A"
-        g.verdict = "DLSS 5 Neural Rendering aplicable."
+        g.verdict = "DLSS 5 Neural Rendering applies."
     elif has_other:
         g.tier = "B"
-        g.verdict = "Neural Rendering aplicable sobre FSR/XeSS."
-        g.notes.append("Desde v0.2.0 el paso no necesita DLSS: se engancha a "
-                       "las entradas de FSR o XeSS igual de bien.")
+        g.verdict = "Neural Rendering applies over FSR/XeSS."
+        g.notes.append("Since v0.2.0 the pass does not need DLSS: it hooks "
+                       "FSR or XeSS inputs just as well.")
     else:
         g.tier = "D"
-        g.verdict = "Sin upscaler temporal: no hay de donde sacar los vectores."
-        g.notes.append("El paso necesita depth y motion vectors, y los toma de "
-                       "los que el juego ya entrega a su upscaler. Sin upscaler "
-                       "no hay nada que interceptar.")
+        g.verdict = "No temporal upscaler: nothing to take the vectors from."
+        g.notes.append("The pass needs depth and motion vectors, and takes the "
+                       "ones the game already hands its upscaler. With no "
+                       "upscaler there is nothing to intercept.")
         return
 
     if dx11 and not dx12:
-        g.notes.append("DX11: pasa por el puente D3D11-on-D3D12, que en v0.2.0 "
-                       "ya admite DLSS directamente.")
+        g.notes.append("DX11: goes through the D3D11-on-D3D12 bridge, which in "
+                       "v0.2.0 carries DLSS directly.")
     if vulkan_only:
-        g.notes.append("Vulkan nativo: soportado desde v0.2.0.")
+        g.notes.append("Native Vulkan: supported since v0.2.0.")
     if not g.apis:
-        g.notes.append("No se pudo confirmar la API grafica, pero las tres "
-                       "(DX11, DX12 y Vulkan) estan soportadas.")
+        g.notes.append("Could not confirm the graphics API, but all three "
+                       "(DX11, DX12 and Vulkan) are supported.")
 
     if g.anticheat:
-        g.notes.append("ANTICHEAT: " + ", ".join(sorted(g.anticheat)) +
-                       ". Meter un DLL junto al ejecutable puede costarte el "
-                       "baneo. En multijugador competitivo, no lo hagas.")
+        g.notes.append("ANTI-CHEAT: " + ", ".join(sorted(g.anticheat)) +
+                       ". Dropping a DLL next to the executable can get you "
+                       "banned. In competitive multiplayer, do not.")
 
 
 def summary_upscalers(g: Game) -> str:
     if not g.upscalers:
-        return "ninguno"
+        return "none"
     order = ["dlss", "dlssg", "dlssd", "sl", "xess", "xefg", "fsr", "fsrfg", "fsr4"]
     short = {"dlss": "DLSS", "dlssg": "DLSS-FG", "dlssd": "DLSS-RR", "sl": "SL",
              "xess": "XeSS", "xefg": "XeFG", "fsr": "FSR", "fsrfg": "FSR-FG",

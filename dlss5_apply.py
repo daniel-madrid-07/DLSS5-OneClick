@@ -1,9 +1,9 @@
 """
-Instalacion, configuracion y marcha atras.
+Install, configuration and rollback.
 
-No se reimplementa el hook de DirectX: eso lo hace OptiScaler, que lleva anos
-y 10.000 estrellas de trabajo encima. Aqui se decide que copiar, donde, con que
-ajustes, y como deshacerlo entero.
+The DirectX hook is not reimplemented here: OptiScaler does that, with years
+and 10,000 stars of work behind it. This module decides what to copy, where,
+with which settings, and how to undo all of it.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ UA = {"User-Agent": "dlss5-oneclick/1.0"}
 
 
 # --------------------------------------------------------------------------
-# Origenes. Solo repositorios oficiales, nada de mirrors ni "manager apps".
+# Sources. Official repositories only - no mirrors, no "manager apps".
 # --------------------------------------------------------------------------
 
 SOURCES = {
@@ -36,54 +36,54 @@ SOURCES = {
         "repo": "Dagherbou/OptiScaler_DLSSNR",
         "label": "OptiScaler + DLSS 5 Neural Rendering",
         "match": lambda n: n.lower().endswith(".zip") and "dlssnr" in n.lower(),
-        "note": "Fork de OptiScaler (GPL-3.0) que anade el paso de Neural Rendering.",
+        "note": "OptiScaler fork (GPL-3.0) adding the Neural Rendering pass.",
     },
     "stable": {
         "repo": "optiscaler/OptiScaler",
-        "label": "OptiScaler estable",
+        "label": "OptiScaler stable",
         "match": lambda n: n.lower().endswith((".7z", ".zip")),
-        "note": "Version oficial. Sin Neural Rendering, pero mas probada.",
+        "note": "Official build. No Neural Rendering, but better tested.",
     },
 }
 
 
 # --------------------------------------------------------------------------
-# Ajustes preestablecidos para el paso de Neural Rendering
+# Presets for the Neural Rendering pass
 # --------------------------------------------------------------------------
 #
-# Los nombres y rangos salen del propio OptiScaler.ini del fork:
-#   TransferStrength  cuanto se mueve el fotograma hacia la imagen del modelo
-#   ColourStrength    si llega tambien el color del modelo o solo su luz
-#   MaxRatio          tope de cuanto puede aclarar un pixel
-#   WorkingScale      fraccion del fotograma a la que trabaja el modelo
+# Names and ranges come from the fork's own OptiScaler.ini:
+#   TransferStrength  how far the frame moves toward the model's picture
+#   ColourStrength    whether the model's colour arrives with its light
+#   MaxRatio          cap on how much a pixel may brighten
+#   WorkingScale      fraction of the frame the model works at
 #
-# WorkingScale por encima de 1.0 hace supersampling del modelo (DX12 y Vulkan,
-# desde v0.2.0) y ScalingDownscaler elige el filtro que promedia la respuesta de
-# vuelta: 4 = Lanczos3, el que recomienda el propio INI.
+# WorkingScale above 1.0 supersamples the model (DX12 and Vulkan, since
+# v0.2.0); ScalingDownscaler picks the filter that averages the answer back
+# down: 4 = Lanczos3, the one the INI itself recommends.
 PRESETS = {
-    "suave": {
-        "label": "Suave  -  respeta el arte original",
+    "subtle": {
+        "label": "Subtle  -  respects the original art",
         "DlssNr": {"TransferStrength": "0.5", "ColourStrength": "0.35",
                    "MaxRatio": "1.5", "WorkingScale": "1.0", "Intensity": "1.0"},
     },
-    "equilibrado": {
-        "label": "Equilibrado  -  recomendado",
+    "balanced": {
+        "label": "Balanced  -  recommended",
         "DlssNr": {"TransferStrength": "1.0", "ColourStrength": "0.6",
                    "MaxRatio": "2.0", "WorkingScale": "1.0", "Intensity": "1.0"},
     },
-    "maximo": {
-        "label": "Maximo detalle  -  se nota, y se paga",
+    "maximum": {
+        "label": "Maximum detail  -  visible, and you pay for it",
         "DlssNr": {"TransferStrength": "1.25", "ColourStrength": "1.0",
                    "MaxRatio": "2.5", "WorkingScale": "1.0", "Intensity": "1.2"},
     },
     "supersampling": {
-        "label": "Supersampling  -  el modelo por encima de nativo, menos ruido",
+        "label": "Supersampling  -  model above native, less noise",
         "DlssNr": {"TransferStrength": "1.0", "ColourStrength": "0.6",
                    "MaxRatio": "2.0", "WorkingScale": "1.5", "Intensity": "1.0",
                    "ScalingDownscaler": "4"},
     },
-    "rendimiento": {
-        "label": "Rendimiento  -  el modelo trabaja a media resolucion",
+    "performance": {
+        "label": "Performance  -  model runs at half resolution",
         "DlssNr": {"TransferStrength": "1.0", "ColourStrength": "0.6",
                    "MaxRatio": "2.0", "WorkingScale": "0.5", "Intensity": "1.0"},
     },
@@ -91,7 +91,7 @@ PRESETS = {
 
 
 # --------------------------------------------------------------------------
-# Descarga con cache
+# Cached download
 # --------------------------------------------------------------------------
 
 def _cache_dir(*parts) -> str:
@@ -101,7 +101,7 @@ def _cache_dir(*parts) -> str:
 
 
 def resolve_release(kind: str, log=print) -> dict:
-    """Consulta la API de GitHub y devuelve tag + asset a descargar."""
+    """Queries the GitHub API and returns the tag plus asset to download."""
     src = SOURCES[kind]
     repo = src["repo"]
     urls = [f"https://api.github.com/repos/{repo}/releases/latest",
@@ -126,14 +126,14 @@ def resolve_release(kind: str, log=print) -> dict:
                     return {"tag": rel["tag_name"], "name": asset["name"],
                             "url": asset["browser_download_url"],
                             "size": asset.get("size", 0), "repo": repo}
-    raise RuntimeError(f"No se pudo consultar {repo}: {last_err}")
+    raise RuntimeError(f"Could not reach {repo}: {last_err}")
 
 
 def download(url: str, dest: str, expected: int = 0, progress=None) -> str:
-    """Descarga a dest si no esta ya cacheado con el tamano correcto."""
+    """Downloads to dest unless already cached at the right size."""
     if os.path.isfile(dest) and (not expected or os.path.getsize(dest) == expected):
         if progress:
-            progress(1.0, "ya descargado")
+            progress(1.0, "already downloaded")
         return dest
 
     tmp = dest + ".part"
@@ -159,7 +159,7 @@ def download(url: str, dest: str, expected: int = 0, progress=None) -> str:
 
 
 def ensure_package(kind: str, progress=None, log=print) -> str:
-    """Devuelve la carpeta con el paquete ya extraido, descargandolo si hace falta."""
+    """Returns the folder with the package extracted, downloading if needed."""
     rel = resolve_release(kind, log=log)
     log(f"Release: {rel['repo']} {rel['tag']}  ({rel['size'] >> 20} MB)")
 
@@ -169,7 +169,7 @@ def ensure_package(kind: str, progress=None, log=print) -> str:
     out = os.path.join(_cache_dir("paquetes"), f"{kind}-{rel['tag']}")
     marker = os.path.join(out, ".ok")
     if os.path.isfile(marker):
-        log("Paquete ya extraido.")
+        log("Package already extracted.")
         return out
 
     if os.path.isdir(out):
@@ -177,7 +177,7 @@ def ensure_package(kind: str, progress=None, log=print) -> str:
     os.makedirs(out, exist_ok=True)
 
     if archive.lower().endswith(".zip"):
-        log("Extrayendo...")
+        log("Extracting...")
         with zipfile.ZipFile(archive) as z:
             z.extractall(out)
     else:
@@ -189,7 +189,7 @@ def ensure_package(kind: str, progress=None, log=print) -> str:
 
 
 def _extract_7z(archive: str, out: str, log=print) -> None:
-    """Los releases estables vienen en .7z; se prueba 7z y luego tar de Windows."""
+    """Stable releases ship as .7z; try 7z first, then Windows tar."""
     for cmd in (["7z", "x", "-y", f"-o{out}", archive],
                 ["C:\\Program Files\\7-Zip\\7z.exe", "x", "-y", f"-o{out}", archive],
                 ["tar", "-xf", archive, "-C", out]):
@@ -201,19 +201,19 @@ def _extract_7z(archive: str, out: str, log=print) -> None:
                 return
         except Exception:                            # noqa: BLE001
             continue
-    raise RuntimeError("No se pudo extraer el .7z. Instala 7-Zip o usa el paquete "
-                       "DLSS 5 (que viene en .zip).")
+    raise RuntimeError("Could not extract the .7z. Install 7-Zip or use the "
+                       "DLSS 5 package, which ships as .zip.")
 
 
 # --------------------------------------------------------------------------
-# Edicion del INI conservando comentarios
+# INI editing that preserves comments
 # --------------------------------------------------------------------------
 
 def read_ini(path: str) -> dict[str, dict[str, str]]:
-    """Lee un INI a {seccion: {clave: valor}}. Ignora comentarios.
+    """Reads an INI into {section: {key: value}}. Comments are ignored.
 
-    No se usa configparser porque el archivo trae claves repetidas comentadas
-    y valores con caracteres que le sientan mal.
+    configparser is avoided because the file carries commented-out duplicate
+    keys and values with characters it chokes on.
     """
     out: dict[str, dict[str, str]] = {}
     try:
@@ -235,16 +235,16 @@ def read_ini(path: str) -> dict[str, dict[str, str]]:
 
 
 def game_ini_path(exe_dir: str) -> str | None:
-    """Ruta al OptiScaler.ini de un juego, si esta instalado."""
+    """Path to a game's OptiScaler.ini, if it is installed."""
     p = os.path.join(exe_dir, "OptiScaler.ini")
     return p if os.path.isfile(p) else None
 
 
 def set_ini(path: str, changes: dict[str, dict[str, str]]) -> None:
-    """Aplica cambios {seccion: {clave: valor}} sin perder los comentarios.
+    """Applies {section: {key: value}} changes without losing the comments.
 
-    El INI de OptiScaler es en buena parte documentacion; reescribirlo con
-    configparser lo dejaria ilegible.
+    OptiScaler's INI is largely documentation; rewriting it with configparser
+    would leave it unreadable.
     """
     with open(path, "r", encoding="utf-8", errors="replace") as f:
         lines = f.read().splitlines()
@@ -269,8 +269,8 @@ def set_ini(path: str, changes: dict[str, dict[str, str]]) -> None:
     if section in pending:
         section_end[section] = len(out)
 
-    # Claves que no existian: se anaden al final de su seccion, de abajo arriba
-    # para que los indices guardados sigan siendo validos.
+    # Keys that did not exist are appended to the end of their section,
+    # bottom-up so the stored indices stay valid.
     for sect in sorted(pending, key=lambda s: section_end.get(s, len(out)), reverse=True):
         leftovers = pending[sect]
         if not leftovers:
@@ -287,11 +287,13 @@ def set_ini(path: str, changes: dict[str, dict[str, str]]) -> None:
 
 
 def build_config(game: Game, preset: str, neural: bool, log_on: bool = False) -> dict:
-    """Construye el conjunto de cambios del INI para este juego."""
+    """Builds the set of INI changes for this game."""
     cfg: dict[str, dict[str, str]] = {
-        "Menu": {"OverlayMenu": "true"},
-        # La clave es LogToFile, no LoggingEnabled: esa no existe en el INI y
-        # se quedaba escrita al final de [Log] sin hacer nada.
+        # F8 opens the overlay. OptiScaler defaults to Insert, but plenty of
+        # games and the Steam/RTSS layers already use it. 0x77 = VK_F8.
+        "Menu": {"OverlayMenu": "true", "ShortcutKey": "0x77"},
+        # The key is LogToFile, not LoggingEnabled: that one does not exist in
+        # the INI and was left at the end of [Log] doing nothing.
         "Log": {"LogToFile": "true" if log_on else "false"},
     }
 
@@ -299,23 +301,23 @@ def build_config(game: Game, preset: str, neural: bool, log_on: bool = False) ->
         nr = dict(PRESETS[preset]["DlssNr"])
         nr.update({"Enabled": "true", "DebugView": "0", "AutoCapture": "false",
                    "AutoMask": "true"})
-        # F10 enciende y apaga el paso dentro del juego sin abrir el overlay.
-        # Es la unica forma honesta de ver si esta haciendo algo.
+        # F10 toggles the pass in game without opening the overlay. It is the
+        # only honest way to see whether it is doing anything.
         nr.setdefault("ToggleKey", "0x79")
         cfg["DlssNr"] = nr
 
-    # Ya no se fuerza DLSS como upscaler de salida en juegos con FSR/XeSS:
-    # desde v0.2.0 el paso neuronal lee las entradas de cualquiera de los tres,
-    # asi que cambiar el upscaler solo anadiria riesgo sin dar nada a cambio.
+    # DLSS is no longer forced as the output upscaler on FSR/XeSS games:
+    # since v0.2.0 the neural pass reads the inputs of any of the three, so
+    # swapping the upscaler would only add risk for nothing in return.
     return cfg
 
 
 # --------------------------------------------------------------------------
-# Instalar
+# Install
 # --------------------------------------------------------------------------
 
 def pick_proxy(exe_dir: str) -> str:
-    """Elige un nombre de DLL libre que el juego cargue automaticamente."""
+    """Picks a free DLL name the game will load on its own."""
     for name in PROXY_NAMES:
         if not os.path.exists(os.path.join(exe_dir, name)):
             return name
@@ -337,21 +339,21 @@ def read_manifest(exe_dir: str) -> dict | None:
     return None
 
 
-def install(game: Game, preset: str = "equilibrado", kind: str = "dlssnr",
+def install(game: Game, preset: str = "balanced", kind: str = "dlssnr",
             neural: bool = True, copy_model: bool = True,
             model_path: str | None = None,
             progress=None, log=print) -> dict:
-    """Copia el paquete al juego, deja copia de seguridad y escribe el INI."""
+    """Copies the package into the game, backs up, and writes the INI."""
     if not game.exe_dir:
-        raise RuntimeError("No se identifico la carpeta del ejecutable.")
+        raise RuntimeError("Could not identify the executable folder.")
 
     exe_dir = game.exe_dir
     if read_manifest(exe_dir):
-        raise RuntimeError("Ya hay una instalacion aqui. Revierte antes de repetir.")
+        raise RuntimeError("There is already an install here. Revert first.")
 
     pkg = ensure_package(kind, progress=progress, log=log)
 
-    # El .zip puede traer todo dentro de una carpeta unica; se busca la raiz real.
+    # The .zip may nest everything in a single folder; find the real root.
     root = pkg
     entries = os.listdir(pkg)
     if len(entries) == 1 and os.path.isdir(os.path.join(pkg, entries[0])):
@@ -363,7 +365,7 @@ def install(game: Game, preset: str = "equilibrado", kind: str = "dlssnr",
                 break
 
     if not os.path.isfile(os.path.join(root, "OptiScaler.dll")):
-        raise RuntimeError("El paquete descargado no contiene OptiScaler.dll.")
+        raise RuntimeError("The downloaded package has no OptiScaler.dll.")
 
     backup = _backup_path(exe_dir)
     os.makedirs(backup, exist_ok=True)
@@ -395,7 +397,7 @@ def install(game: Game, preset: str = "equilibrado", kind: str = "dlssnr",
         shutil.copy2(src, dest)
 
     proxy = pick_proxy(exe_dir)
-    log(f"OptiScaler se instalara como {proxy}")
+    log(f"OptiScaler will install as {proxy}")
 
     skip = {"optiscaler.dll", "setup_windows.bat", "setup_linux.sh",
             "streamlined_fetcher_windows.bat"}
@@ -417,13 +419,13 @@ def install(game: Game, preset: str = "equilibrado", kind: str = "dlssnr",
     ini = os.path.join(exe_dir, "OptiScaler.ini")
     if os.path.isfile(ini):
         set_ini(ini, build_config(game, preset, neural))
-        log(f"OptiScaler.ini configurado ({preset}).")
+        log(f"OptiScaler.ini configured ({preset}).")
 
-    # --- modelo de Neural Rendering ---------------------------------------
+    # --- Neural Rendering model ---------------------------------------
     if neural and copy_model:
         got = model_path or dlss5_model.obtain(log=log)["path"]
         if got:
-            log(f"Copiando el modelo ({os.path.getsize(got) >> 20} MB)...")
+            log(f"Copying the model ({os.path.getsize(got) >> 20} MB)...")
             dest_rel = dlss5_model.MODEL_NAME
             dest = os.path.join(exe_dir, dest_rel)
             if not os.path.exists(dest):
@@ -431,27 +433,27 @@ def install(game: Game, preset: str = "equilibrado", kind: str = "dlssnr",
             shutil.copy2(got, dest)
             manifest["modelo"] = got
         else:
-            log("AVISO: no se encontro nvngx_dlssnr.dll. OptiScaler queda "
-                "instalado y funcionando, pero el paso neuronal estara apagado "
-                "hasta que consigas el modelo (boton \"Buscar modelo\").")
+            log("NOTE: nvngx_dlssnr.dll was not found. OptiScaler is installed "
+                "and working, but the neural pass stays off until you get the "
+                "model (\"Find model\" button).")
             manifest["modelo"] = None
 
     with open(os.path.join(backup, MANIFEST), "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2, ensure_ascii=False)
 
-    log("Instalacion terminada.")
+    log("Install finished.")
     return manifest
 
 
 # --------------------------------------------------------------------------
-# Revertir
+# Revert
 # --------------------------------------------------------------------------
 
 def revert(exe_dir: str, log=print) -> None:
-    """Deja la carpeta exactamente como estaba."""
+    """Leaves the folder exactly as it was."""
     manifest = read_manifest(exe_dir)
     if not manifest:
-        raise RuntimeError("No hay copia de seguridad en esta carpeta.")
+        raise RuntimeError("There is no backup in this folder.")
 
     backup = _backup_path(exe_dir)
 
@@ -461,7 +463,7 @@ def revert(exe_dir: str, log=print) -> None:
             try:
                 os.remove(p)
             except OSError as e:
-                log(f"  no se pudo borrar {rel}: {e}")
+                log(f"  could not delete {rel}: {e}")
 
     for rel in manifest.get("respaldados", {}):
         src = os.path.join(backup, rel)
@@ -469,11 +471,11 @@ def revert(exe_dir: str, log=print) -> None:
         if os.path.isfile(src):
             os.makedirs(os.path.dirname(dest), exist_ok=True)
             shutil.copy2(src, dest)
-            log(f"  restaurado {rel}")
+            log(f"  restored {rel}")
 
-    # Solo se borran las carpetas que creamos nosotros, deducidas de las rutas
-    # del manifiesto. Barrer todo el arbol se llevaria por delante carpetas
-    # vacias que ya existian antes, y eso no seria dejarlo "como estaba".
+    # Only folders we created are removed, derived from the manifest paths.
+    # Sweeping the whole tree would take out empty folders that already
+    # existed, and that would not be leaving it "as it was".
     ours: set[str] = set()
     for rel in manifest.get("creados", []):
         parent = os.path.dirname(rel)
@@ -484,7 +486,7 @@ def revert(exe_dir: str, log=print) -> None:
         p = os.path.join(exe_dir, rel)
         if os.path.isdir(p):
             try:
-                os.rmdir(p)                       # falla sola si no esta vacia
+                os.rmdir(p)                       # fails on its own if not empty
             except OSError:
                 pass
 
@@ -496,18 +498,18 @@ def revert(exe_dir: str, log=print) -> None:
             shutil.rmtree(p, ignore_errors=True)
 
     shutil.rmtree(backup, ignore_errors=True)
-    log("Revertido. La carpeta esta como al principio.")
+    log("Reverted. The folder is back to its original state.")
 
 
 # --------------------------------------------------------------------------
-# Actualizar el DLL de DLSS con la copia mas nueva del propio PC
+# Upgrade the game DLSS DLL with the newest copy on this PC
 # --------------------------------------------------------------------------
 
 def upgrade_dlss_dll(game: Game, harvest: dict, log=print) -> bool:
-    """Sustituye nvngx_dlss*.dll del juego por la version mas nueva encontrada.
+    """Replaces the game's nvngx_dlss*.dll with the newest version found.
 
-    No descarga nada: usa lo que ya hay en el driver o en otros juegos, que es
-    la unica forma limpia de hacerlo.
+    Downloads nothing: it uses what the driver or other games already put on
+    disk, which is the only clean way to do it.
     """
     from dlss5_scan import version_tuple
 

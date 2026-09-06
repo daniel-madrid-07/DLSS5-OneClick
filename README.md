@@ -1,269 +1,279 @@
 # DLSS 5 One-Click
 
-Detecta qué juegos de tu PC admiten **DLSS 5 Neural Rendering**, lo instala en
-un clic y sabe deshacerlo entero, byte a byte.
+Finds which of your installed games can take **DLSS 5 Neural Rendering**,
+installs it in one click, and removes it byte-for-byte.
 
-[![Descargar](https://img.shields.io/badge/Descargar-DLSS5--OneClick.exe-76b900?style=for-the-badge)](https://github.com/daniel-madrid-07/DLSS5-OneClick/releases/latest)
+[![Download](https://img.shields.io/badge/Download-DLSS5--OneClick.exe-76b900?style=for-the-badge)](https://github.com/daniel-madrid-07/DLSS5-OneClick/releases/latest)
 
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
-![Sin instalacion](https://img.shields.io/badge/instalaci%C3%B3n-ninguna-76b900)
-![Licencia](https://img.shields.io/badge/licencia-MIT-blue)
+![No install](https://img.shields.io/badge/install-none-76b900)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-## Descarga
+## Download
 
-Baja **`DLSS5-OneClick.exe`** de la
-[última release](https://github.com/daniel-madrid-07/DLSS5-OneClick/releases/latest)
-y ábrelo. Un solo archivo de ~11 MB: **no hace falta instalar Python ni nada
-más**. No se instala en el sistema, no toca el registro.
+Grab **`DLSS5-OneClick.exe`** from the
+[latest release](https://github.com/daniel-madrid-07/DLSS5-OneClick/releases/latest)
+and run it. One ~11 MB file: **no Python, no installer, no registry changes.**
 
 <details>
-<summary>Ejecutarlo desde el código fuente</summary>
+<summary>Running from source</summary>
 
-Necesita Python 3.10+ y nada más — no usa `pip`:
+Needs Python 3.10+ and nothing else — it never calls `pip`:
 
 ```
-DLSS5.bat          (o:  python dlss5.py)
+DLSS5.bat          (or:  python dlss5.py)
 ```
 
-Para compilar tu propio `.exe`: `python build.py` (requiere `pyinstaller`).
+To build your own executable: `python build.py` (requires `pyinstaller`).
 </details>
 
 > [!WARNING]
-> Esto mete un DLL junto al ejecutable de tus juegos. Es exactamente lo que
-> buscan los anticheat. **No lo uses en multijugador competitivo**: el programa
-> detecta EAC, BattlEye, Vanguard y Denuvo AC y te pide confirmación, pero la
-> decisión y el riesgo de baneo son tuyos.
+> This drops a DLL next to your game executables — exactly what anti-cheat
+> looks for. **Don't use it in competitive multiplayer.** The tool detects EAC,
+> BattlEye, Vanguard and Denuvo AC and asks for confirmation, but the ban risk
+> is yours.
 
 ---
 
-## Qué es DLSS 5 y qué no es
+## In-game controls
 
-DLSS 5 salió el **3 de septiembre de 2026** y no es un upscaler. Es
-*3D-Guided Neural Rendering*: un modelo de difusión que reescribe la iluminación
-y los materiales del fotograma ya renderizado. DLSS 4.5 sigue encargándose de
-Super Resolution, Ray Reconstruction y Multi Frame Generation; DLSS 5 es una
-capa aparte que se suma.
+| Key | |
+|---|---|
+| **F8** | Opens the OptiScaler overlay — live sliders for Neural Rendering, the reversible proxy, upscaler and frame generation |
+| **F10** | Toggles the neural pass on and off |
 
-**No se puede aplicar a cualquier juego, y conviene saber por qué.** El modelo
-necesita saber dónde está cada cosa en la escena. En la integración oficial de
-NVIDIA eso llega por Streamline: color, motion vectors, albedo, normales y los
-buffers de iluminación. Un juego que no entrega esos datos no tiene nada que
-darle al modelo.
+Both are set up automatically on install. F8 replaces OptiScaler's default
+Insert key, which several games and the Steam overlay already use — you can
+change it under **Settings... → System**.
 
-El atajo que usa esta herramienta —el fork de OptiScaler— no busca esos buffers
-en el motor: **intercepta los que el juego ya le pasa a su upscaler cada
-fotograma** (depth y motion vectors). Por eso funciona en cualquier título con
-upscaler sin trabajo por juego, y por eso no hace absolutamente nada en un juego
-que no tenga ninguno. Con menos guías que la integración oficial, el resultado
-tampoco es idéntico al de un juego con DLSS 5 nativo.
+The overlay is where the real-time work happens: the sliders live in the game's
+memory, so they respond instantly. The INI is only read at startup.
 
-Desde **v0.2.0** del fork (3 sept 2026) el paso ya no exige DLSS: se engancha
-igual a FSR y a XeSS, y Vulkan pasó a estar soportado de forma nativa.
+## What DLSS 5 is, and what it isn't
 
-## Requisitos
+DLSS 5 shipped on **3 September 2026** and it is not an upscaler. It is
+*3D-Guided Neural Rendering*: a diffusion model that rewrites lighting and
+materials on the already-rendered frame. DLSS 4.5 still handles Super
+Resolution, Ray Reconstruction and Multi Frame Generation; DLSS 5 is a separate
+layer on top.
+
+**It can't be applied to just any game, and the reason matters.** The model
+needs to know where things are in the scene. NVIDIA's official integration
+feeds it through Streamline: colour, motion vectors, albedo, normals and
+lighting buffers. A game that hands over none of that has nothing to give it.
+
+The shortcut this tool relies on — the OptiScaler fork — doesn't hunt for those
+buffers in the engine. It **intercepts the ones the game already passes to its
+own upscaler** every frame (depth and motion vectors). That's why it works in
+any title with an upscaler and no per-game work, and why it does nothing at all
+in a game without one. With fewer guides than the official integration, the
+result isn't identical to native DLSS 5 either.
+
+Since fork **v0.2.0** (3 Sept 2026) the pass no longer requires DLSS: it hooks
+FSR and XeSS just as well, and Vulkan is natively supported.
+
+## Requirements
 
 | | |
 |---|---|
-| **GPU** | RTX 50 (Blackwell). En RTX 20/30/40 hace falta un DLL modificado que este programa no proporciona |
-| **Driver** | 616.56 o superior |
-| **Modelo** | `nvngx_dlssnr.dll` (~158 MB) — ver abajo, es la parte que atasca |
-| **Juego** | Con cualquier upscaler temporal (DLSS, FSR o XeSS), en DX11, DX12 o Vulkan |
+| **GPU** | RTX 50 (Blackwell). RTX 20/30/40 need a modified DLL this tool does not provide |
+| **Driver** | 616.56 or newer |
+| **Model** | `nvngx_dlssnr.dll` (~158 MB) — see below, this is the sticking point |
+| **Game** | Any temporal upscaler (DLSS, FSR or XeSS), on DX11, DX12 or Vulkan |
 
-El programa comprueba las cuatro cosas al arrancar y te dice cuál falta.
+The tool checks all four on startup and tells you which one is missing.
 
-## El modelo no está en el driver
+## The model is not in the driver
 
-Puedes tener el driver correcto instalado y no encontrar `nvngx_dlssnr.dll` por
-ningún lado. **No viene ahí.**
+You can have the right driver installed and still find no `nvngx_dlssnr.dll`
+anywhere. **It isn't shipped there.**
 
-Verificado el 5/9/2026 descargando el instalador oficial 616.64 (938 MB desde
-`us.download.nvidia.com`) y abriéndolo: sus únicos `nvngx_*` son `nvngx.dll`,
-`nvngx_dlssg.dll`, `nvngx_dlisr.dll` y `nvngx_update.exe`. Ni rastro de
-`dlssnr`. Tampoco hay interruptor en la NVIDIA App — NVIDIA confirmó que no
-habría override por juego.
+Verified on 5 Sept 2026 by downloading the official 616.64 installer (938 MB
+from `us.download.nvidia.com`) and opening it: its only `nvngx_*` files are
+`nvngx.dll`, `nvngx_dlssg.dll`, `nvngx_dlisr.dll` and `nvngx_update.exe`. No
+`dlssnr`. There's no switch in the NVIDIA App either — NVIDIA confirmed there
+would be no per-game override.
 
-**El modelo lo distribuye cada juego que implementa DLSS 5.** Se descubrió
-dentro de NBA 2K27, en `data\streamline\nvngx_dlssnr.dll` (158 MB, se identifica
-como "NVIDIA DLSSNR"), y a día de hoy ese es el único que lo trae.
+**Each game that implements DLSS 5 ships the model itself.** It was first found
+inside NBA 2K27, at `data\streamline\nvngx_dlssnr.dll` (158 MB, identifying
+itself as "NVIDIA DLSSNR"), and today that is the only game carrying it.
 
 > [!NOTE]
-> Ojo con el anuncio de NVIDIA, que agrupa cosas distintas: **Onimusha: Way of
-> the Sword**, **The Blood of Dawnwalker** y **STAR WARS Zero Company** salen en
-> el mismo artículo pero solo reciben DLSS 4.5. **No llevan el modelo**, y la
-> demo gratuita de Onimusha tampoco. Instalarlos para esto es tirar 100 GB.
+> NVIDIA's announcement bundles two different things together. **Onimusha: Way
+> of the Sword**, **The Blood of Dawnwalker** and **STAR WARS Zero Company**
+> appear in the same article but only get DLSS 4.5. **They do not carry the
+> model**, and neither does Onimusha's free demo. Installing them for this is
+> 100 GB wasted.
 
 > [!TIP]
-> **Si ya tienes el archivo, déjalo junto al `.exe` y ya está.** Se detecta
-> solo al arrancar, sin pulsar nada. La primera instalación lo copia a la caché,
-> así que después puedes mover o borrar el ejecutable y seguirá funcionando.
+> **Already have the file? Drop it next to the `.exe` and you're done.** It is
+> picked up on startup with nothing to click. The first install copies it to
+> the cache, so afterwards you can move or delete the executable.
 
-El botón **Buscar modelo** mira, por este orden: **la carpeta del propio
-programa**, la caché, tus juegos instalados, y por último cualquier instalador
-de driver que tengas suelto. Basta con tener el juego instalado — no hay que
-jugarlo. El DLL se copia a `%LOCALAPPDATA%\DLSS5\modelo` y de ahí a todos los
-demás juegos, así que puedes desinstalar el juego origen después.
+**Search order:** the program's own folder → cache → your installed games →
+any loose driver installer. Having the game installed is enough; you don't have
+to play it. The DLL is copied to `%LOCALAPPDATA%\DLSS5\model` and reused for
+every other game, so the source game can be uninstalled afterwards.
 
-**El programa nunca descarga el modelo de terceros.** Es de NVIDIA, y los sitios
-que lo reempaquetan son justo los que conviene evitar.
+**The tool never downloads the model from third parties.** It belongs to NVIDIA,
+and the sites that repackage it are precisely the ones worth avoiding.
 
 > [!IMPORTANT]
-> **Por qué el `.exe` no trae el modelo dentro.** `nvngx_dlssnr.dll` es software
-> propietario de NVIDIA. Redistribuirlo es igual de ilegal embebido en un
-> ejecutable que suelto en un ZIP — el formato no cambia la licencia, y un
-> `.exe` no lo oculta: PyInstaller empaqueta, no cifra. Además, un ejecutable
-> de 170 MB que suelta DLLs en carpetas de juegos es el perfil exacto que los
-> antivirus marcan como troyano.
+> **Why the `.exe` doesn't bundle the model.** `nvngx_dlssnr.dll` is NVIDIA's
+> proprietary software. Redistributing it is no more legal embedded inside an
+> executable than loose in a ZIP — the container doesn't change the licence,
+> and an `.exe` doesn't hide it either: PyInstaller packs, it doesn't encrypt.
+> On top of that, a 170 MB executable that drops DLLs into game folders is the
+> exact profile antivirus engines flag as a trojan.
 >
-> Por eso la herramienta **localiza** el modelo en tu propio disco en vez de
-> traerlo. Todo lo demás sí funciona sin él.
+> So the tool **locates** the model on your own disk instead of shipping it.
+> Everything else works without it.
 
-### No hace falta esperar al modelo para instalar
+### You don't have to wait for the model
 
-El paso neuronal es **opcional dentro de OptiScaler**, no un requisito de
-arranque. Sin el DLL se instala igual y funciona lo demás: cambiar el upscaler,
-frame generation, RCAS, overrides de DLSS. Solo el paso de Neural Rendering
-queda apagado, y el overlay dice exactamente por qué
-(`"nvngx_dlssnr.dll was not found"`) en vez de fallar en silencio. Cuando
-consigas el DLL, vuelves a darle a Aplicar y se copia.
+The neural pass is **optional inside OptiScaler**, not a startup requirement.
+Without the DLL everything else still installs and runs: swapping the upscaler,
+frame generation, RCAS sharpening, DLSS preset overrides, and 22 of the 35
+settings. Only the neural pass stays off, and the overlay says exactly why
+(`"nvngx_dlssnr.dll was not found"`) instead of failing silently. Once you have
+the DLL, hit Apply again and it gets copied in.
 
-## Uso
+## Usage
 
-1. **Buscar juegos instalados** — recorre Steam, Epic y GOG. Unos 6 segundos
-   para 40 juegos.
-2. Selecciona uno y elige un ajuste.
-3. **Aplicar DLSS 5**.
-4. Dentro del juego, **Insert** abre el overlay; **F10** enciende y apaga el
-   paso.
+1. **Scan installed games** — walks Steam, Epic and GOG. About 6 seconds for
+   40 games.
+2. Pick one, choose a preset.
+3. **Apply DLSS 5**.
+4. In game: **F8** for the overlay, **F10** to toggle the pass.
 
-### Los niveles
+### Tiers
 
-- **Sí (DLSS)** — tiene DLSS. El caso ideal.
-- **Sí (FSR/XeSS)** — sin DLSS, pero desde v0.2.0 el paso se engancha igual de
-  bien a las entradas de FSR o XeSS.
-- **No** — sin upscaler temporal. No hay depth ni motion vectors que
-  interceptar. No hay truco que valga.
+- **Yes (DLSS)** — has DLSS. The ideal case.
+- **Yes (FSR/XeSS)** — no DLSS, but since v0.2.0 the pass hooks FSR or XeSS
+  inputs just as well.
+- **No** — no temporal upscaler. There is no depth or motion vector to
+  intercept, and no trick works around that.
 
-### Qué hace al aplicar
+### What Apply does
 
-1. Descarga el release oficial del fork y lo cachea en `%LOCALAPPDATA%\DLSS5`.
-2. Copia los archivos junto al ejecutable **real** del juego — que no siempre
-   está en la raíz: Cyberpunk lo tiene en `bin\x64` y los Unreal en
-   `<Juego>\Binaries\Win64`.
-3. Renombra `OptiScaler.dll` a un nombre libre que el juego cargue solo
-   (`dxgi.dll`, o el siguiente que quede libre si está ocupado).
-4. Escribe `[DlssNr]` con el ajuste elegido, respetando los comentarios.
-5. Copia el modelo desde la caché (hace falta una copia por juego: no existe
-   ubicación compartida).
-6. Actualiza los `nvngx_dlss*.dll` del juego si tienes una versión más nueva en
-   otro sitio del PC. No baja DLL de NVIDIA de ningún sitio: usa los que tienes.
+1. Downloads the fork's official release and caches it in `%LOCALAPPDATA%\DLSS5`.
+2. Copies the files next to the **real** game executable — which isn't always in
+   the root: Cyberpunk keeps it in `bin\x64`, Unreal games in
+   `<Game>\Binaries\Win64`.
+3. Renames `OptiScaler.dll` to a free name the game loads on its own
+   (`dxgi.dll`, or the next available one if it's taken).
+4. Writes `[DlssNr]` with the chosen preset, keeping the file's comments intact.
+5. Copies the model from the cache (one copy per game is required — there is no
+   shared location).
+6. Upgrades the game's `nvngx_dlss*.dll` files if a newer version exists
+   elsewhere on your PC. It never downloads NVIDIA DLLs: it uses what you have.
 
-Todo lo que sobrescribe va antes a `_DLSS5_backup\` con un manifiesto.
-**Revertir** deja la carpeta byte a byte como estaba.
+Anything overwritten is saved to `_DLSS5_backup\` with a manifest first.
+**Revert** restores the folder byte-for-byte.
 
-## Ajustes
+## Presets
 
-| Preset | Para qué |
+| Preset | For |
 |---|---|
-| **Suave** | Respeta el arte original. Solo la luz lleva la opinión del modelo |
-| **Equilibrado** | El recomendado |
-| **Máximo detalle** | Empuja más allá de lo que el modelo pide. Se nota |
-| **Supersampling** | El modelo corre por encima de nativo y se promedia de vuelta con Lanczos3: menos ruido. Caro |
-| **Rendimiento** | El modelo trabaja a media resolución. El coste cae al cuadrado |
+| **Subtle** | Respects the original art. Only luminance carries the model's verdict |
+| **Balanced** | The recommended one |
+| **Maximum detail** | Pushes past what the model asks for. Visible |
+| **Supersampling** | The model runs above native and is averaged back down with Lanczos3: less noise, higher cost |
+| **Performance** | The model works at half resolution. Cost falls with the square |
 
-### Editor por juego
+### Per-game editor
 
-El botón **Ajustes...** abre un editor sobre el `OptiScaler.ini` del juego: 33
-opciones en cinco grupos plegables — Neural Rendering, Upscaler, Calidad y
-nitidez, Frame Generation y Sistema. Cada control lleva debajo lo que hace, con
-los rangos reales que documenta el propio archivo.
+**Settings...** opens an editor over the game's `OptiScaler.ini`: 35 options in
+five collapsible groups — Neural Rendering, Upscaler, Quality & sharpening,
+Frame Generation and System. Each control carries its explanation underneath,
+with the ranges the file itself documents.
 
-Guarda **solo lo que cambies**; el resto queda intacto, comentarios incluidos.
-Un valor en `auto` sigue en `auto` — un clic en la cifra de un deslizador lo
-devuelve a `auto`. Los cambios entran al arrancar el juego.
+It saves **only what you changed**; everything else stays untouched, comments
+included. A value left at `auto` stays `auto` — clicking a slider's number
+returns it to `auto`. Changes take effect when the game starts.
 
-### Lo que solo se toca dentro del juego
+### Overlay-only controls
 
-La mejora grande de v0.2.0 es el **proxy reversible**, y su modo recomendado es
-*Hybrid proxy + composed*: mantiene los medios tonos y recupera el detalle que
-la curva antigua aplastaba en las luces. **No existe como clave del INI**, así
-que ninguna ventana externa puede preconfigurarlo. Se cambia con Insert →
-Colour. Lo mismo vale para el anclaje multipunto del punto de blanco y el
-"Hold frame".
+The big improvement in v0.2.0 is the **reversible proxy**, and its recommended
+mode is *Hybrid proxy + composed*: it keeps the midtones while recovering the
+detail the old curve crushed in highlights. It **doesn't exist as an INI key**,
+so no external window can pre-configure it. Change it in the overlay under
+Colour. The same goes for multi-point white-point anchoring and Hold frame.
 
-### Cómo saber si de verdad hace algo
+### Telling whether it actually does anything
 
-A ojo y en movimiento uno se autoengaña con facilidad. Dos formas honestas:
+Eyes lie, especially in motion. Two honest ways:
 
-- **F10** apaga y enciende el paso sin abrir el menú. Quédate quieto en una
-  escena con luz interesante y alterna.
-- **DebugView → "Diferencia x20"** pinta lo que el modelo ha cambiado,
-  amplificado. Un **gris plano** significa que no está tocando nada.
+- **F10** toggles the pass without opening any menu. Stand still in a scene with
+  interesting lighting and flick it.
+- **DebugView → "Difference ×20"** paints what the model changed, amplified.
+  A **flat grey** frame means it is doing nothing at all.
 
-## Anticheat
+## Anti-cheat
 
-Si detecta EAC, BattlEye, Vanguard, mhyprot o Denuvo AC, lo marca en la lista y
-pide confirmación explícita antes de instalar. Meter un DLL junto al ejecutable
-es justo lo que esos sistemas buscan.
+If EAC, BattlEye, Vanguard, mhyprot or Denuvo AC is detected, the game is
+flagged in the list and an explicit confirmation is required before installing.
+Dropping a DLL next to a game executable is exactly what those systems hunt for.
 
-## Aviso sobre repositorios falsos
+## A note on fake repositories
 
-Circulan repos que prometen "DLSS 5 en cualquier juego, incluido D3D9". Es
-imposible: un juego de D3D9 no tiene motion vectors que dar. Uno de los que
-circulaba al escribir esto tenía dos días de vida, 677 MB de binarios opacos, y
-falsificaba los buffers con shaders de ReShade.
+Repositories circulate promising "DLSS 5 in any game, D3D9 included". That is
+impossible: a D3D9 game has no motion vectors to give. One doing the rounds at
+the time of writing was two days old, 677 MB of opaque binaries, and faked the
+buffers with ReShade shaders.
 
-El equipo de OptiScaler avisa además de webs y "manager apps" falsas: sus únicos
-sitios legítimos son su GitHub, su Discord y la página de Nitec en NexusMods.
+The OptiScaler team also warns about fake websites and "manager apps": their
+only legitimate homes are their GitHub, their Discord, and Nitec's NexusMods
+page.
 
-Esta herramienta solo descarga de los repos oficiales listados en `SOURCES`
-(`dlss5_apply.py`) y guarda el SHA-256 de todo lo que baja.
+This tool only downloads from the official repositories listed in `SOURCES`
+(`dlss5_apply.py`) and records the SHA-256 of everything it fetches.
 
-## Estructura
+## Layout
 
-| Archivo | |
+| File | |
 |---|---|
-| `dlss5.py` | Interfaz principal |
-| `dlss5_scan.py` | Detección: PE, motor, API, upscalers, GPU, anticheat |
-| `dlss5_apply.py` | Descarga, instalación, INI y marcha atrás |
-| `dlss5_model.py` | Conseguir `nvngx_dlssnr.dll` de los juegos que lo traen |
-| `dlss5_opts.py` | Catálogo de ajustes, con tipos y rangos reales |
-| `dlss5_editor.py` | Editor visual por juego |
-| `build.py` | Compila el `.exe` de la release |
-| `pruebas.py` | 46 comprobaciones |
+| `dlss5.py` | Main window |
+| `dlss5_scan.py` | Detection: PE parsing, engine, API, upscalers, GPU, anti-cheat |
+| `dlss5_apply.py` | Download, install, INI editing and rollback |
+| `dlss5_model.py` | Locating `nvngx_dlssnr.dll` |
+| `dlss5_opts.py` | Settings catalogue with real types and ranges |
+| `dlss5_editor.py` | Per-game visual editor |
+| `build.py` | Builds the release executable |
+| `tests.py` | 50 checks |
 
-### Pruebas
+### Tests
 
 ```
-python pruebas.py
+python tests.py
 ```
 
-Monta un juego falso, instala encima, comprueba el resultado y revierte,
-comparando SHA-256 de todo el árbol. Si un solo byte cambia, falla. También
-valida que **cada clave del catálogo existe de verdad** en el INI — una clave
-inventada se escribe sin error y no hace nada, que es justo el fallo que tuvo
-`Log.LoggingEnabled`.
+Builds a fake game, installs over it, verifies the result and reverts, comparing
+SHA-256 across the whole tree. If a single byte changes, it fails. It also
+verifies that **every key in the catalogue actually exists** in the INI — an
+invented key writes without error and does nothing, which is exactly the bug
+`Log.LoggingEnabled` had.
 
-## Créditos
+## Credits
 
-El trabajo duro no es mío:
+The hard work isn't mine:
 
 - **[OptiScaler](https://github.com/optiscaler/OptiScaler)** (cdozdil / Nitec),
-  GPL-3.0 — el hook de DirectX y todo el puente entre upscalers.
+  GPL-3.0 — the DirectX hook and the whole upscaler bridge.
 - **[OptiScaler_DLSSNR](https://github.com/Dagherbou/OptiScaler_DLSSNR)** (dag),
-  GPL-3.0 — el paso de Neural Rendering.
-- **[RenoDX](https://github.com/clshortfuse/renodx)** (clshortfuse), MIT — la
-  composición de color que hace que el resultado no se rompa.
+  GPL-3.0 — the Neural Rendering pass.
+- **[RenoDX](https://github.com/clshortfuse/renodx)** (clshortfuse), MIT — the
+  colour composition that keeps the result from falling apart.
 
-Esta herramienta es un frontend: detecta, decide, configura y sabe deshacerlo.
-No incluye ni redistribuye ninguno de los anteriores; los descarga de sus
-propios releases cuando pulsas Aplicar.
+This tool is a front-end: it detects, decides, configures, and knows how to undo
+itself. It bundles none of the above — they are downloaded from their own
+releases when you press Apply.
 
-## Licencia
+## Licence
 
-MIT — ver [LICENSE](LICENSE). Cubre solo el código de este repositorio.
+MIT — see [LICENSE](LICENSE). It covers only the code in this repository.
 
-El software que la herramienta descarga en tiempo de ejecución conserva su
-propia licencia y no se redistribuye aquí; los detalles, componente por
-componente, están en [NOTICE.md](NOTICE.md).
+Software downloaded at run time keeps its own licence and is not redistributed
+here; the per-component details are in [NOTICE.md](NOTICE.md).
 
-No está afiliado a NVIDIA ni al equipo de OptiScaler.
+Not affiliated with NVIDIA or the OptiScaler team.

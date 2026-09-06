@@ -1,34 +1,34 @@
-# Avisos de terceros
+# Third-party notices
 
-La licencia [MIT](LICENSE) de este repositorio cubre **solo el código que hay
-aquí**.
+The [MIT licence](LICENSE) of this repository covers **only the code kept
+here**.
 
-No cubre el software que la herramienta descarga en tiempo de ejecución. Ese
-software conserva su propia licencia y **nunca se redistribuye en este
-repositorio**: se baja de sus propios releases oficiales cuando pulsas Aplicar.
+It does not cover the software the tool downloads at run time. That software
+keeps its own licence and is **never redistributed in this repository**: it is
+fetched from its own official releases when you press Apply.
 
-| Componente | Licencia | Cómo se usa |
+| Component | Licence | How it is used |
 |---|---|---|
-| [OptiScaler](https://github.com/optiscaler/OptiScaler) (cdozdil / Nitec) | GPL-3.0 | Se descarga su release. Este proyecto no incluye su código ni enlaza contra sus binarios: solo copia los archivos publicados y escribe su archivo `.ini` |
-| [OptiScaler_DLSSNR](https://github.com/Dagherbou/OptiScaler_DLSSNR) (dag) | GPL-3.0 | Igual que el anterior. Es el fork que añade el paso de Neural Rendering |
-| [RenoDX](https://github.com/clshortfuse/renodx) (clshortfuse) | MIT | Su composición de color la usa el fork internamente, no este código |
-| `nvngx_dlssnr.dll` y demás librerías NGX | Propietaria — NVIDIA | **Nunca se descargan ni se redistribuyen.** La herramienta solo copia archivos que ya están en tu máquina, procedentes de un juego que los instaló o de tu driver |
+| [OptiScaler](https://github.com/optiscaler/OptiScaler) (cdozdil / Nitec) | GPL-3.0 | Its release is downloaded. This project includes none of its source and links against none of its binaries: it copies the published files and writes its `.ini` |
+| [OptiScaler_DLSSNR](https://github.com/Dagherbou/OptiScaler_DLSSNR) (dag) | GPL-3.0 | Same as above. It is the fork that adds the Neural Rendering pass |
+| [RenoDX](https://github.com/clshortfuse/renodx) (clshortfuse) | MIT | Its colour composition is used internally by the fork, not by this code |
+| `nvngx_dlssnr.dll` and the other NGX libraries | Proprietary — NVIDIA | **Never downloaded, never redistributed.** The tool only copies files already present on your machine, put there by a game that installed them or by your driver |
 
-## Sobre el modelo de NVIDIA
+## About NVIDIA's model
 
-`nvngx_dlssnr.dll` es propiedad de NVIDIA. Este proyecto:
+`nvngx_dlssnr.dll` is NVIDIA's property. This project:
 
-- **no** lo incluye en el repositorio,
-- **no** lo descarga de internet,
-- **no** lo obtiene de repositorios de terceros que lo reempaquetan,
-- solo lo **copia** desde una ubicación de tu propio disco a la carpeta del
-  juego donde lo necesitas.
+- does **not** include it in the repository,
+- does **not** download it from the internet,
+- does **not** obtain it from third-party repositories that repackage it,
+- only **copies** it from a location on your own disk into the game folder that
+  needs it.
 
-Si no tienes una copia legítima en tu máquina, la herramienta te lo dice y no
-hace nada más.
+If you have no legitimate copy on your machine, the tool says so and does
+nothing further.
 
-## Sin afiliación
+## No affiliation
 
-Este proyecto no está afiliado, patrocinado ni respaldado por NVIDIA
-Corporation, por el equipo de OptiScaler, ni por ninguno de los autores citados.
-Todas las marcas pertenecen a sus respectivos propietarios.
+This project is not affiliated with, sponsored by, or endorsed by NVIDIA
+Corporation, the OptiScaler team, or any of the authors credited above. All
+trademarks belong to their respective owners.

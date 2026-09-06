@@ -1,12 +1,12 @@
 """
-Editor visual de ajustes por juego.
+Per-game visual settings editor.
 
-Se abre sobre un juego ya instalado, lee su OptiScaler.ini y deja tocar todo
-lo que el archivo admite. Guarda solo lo que cambies: las claves que no toques
-se quedan como estan, con sus comentarios intactos.
+Opens on an already-installed game, reads its OptiScaler.ini and exposes
+everything the file accepts. Saves only what you change: keys you do not touch
+stay as they are, comments intact.
 
-Minimalista a proposito: una columna, grupos plegables, y la ayuda de cada
-ajuste debajo en gris. Nada de pestanas ni de cuadriculas de 336 casillas.
+Deliberately minimal: one column, collapsible groups, and each setting's help
+underneath in grey. No tabs, no grid of 336 boxes.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ class Editor(tk.Toplevel):
         super().__init__(parent)
         self.game = game
         self.on_saved = on_saved
-        self.title(f"Ajustes  ·  {game.name}")
+        self.title(f"Settings  ·  {game.name}")
         self.geometry("620x760")
         self.minsize(560, 520)
         self.configure(bg=BG)
@@ -40,15 +40,15 @@ class Editor(tk.Toplevel):
 
         self.ini_path = apply_mod.game_ini_path(game.exe_dir or game.root)
         if not self.ini_path:
-            messagebox.showerror("Ajustes",
-                                 "Este juego no tiene OptiScaler.ini.\n\n"
-                                 "Aplica DLSS 5 primero.", parent=parent)
+            messagebox.showerror("Settings",
+                                 "This game has no OptiScaler.ini.\n\n"
+                                 "Apply DLSS 5 first.", parent=parent)
             self.destroy()
             return
 
         self.data = apply_mod.read_ini(self.ini_path)
         self.vars: dict[tuple, tk.Variable] = {}
-        self.open_groups: set[str] = {"nr"}      # solo el primero abierto
+        self.open_groups: set[str] = {"nr"}      # only the first group open
 
         self._style()
         self._build()
@@ -92,7 +92,7 @@ class Editor(tk.Toplevel):
         ttk.Label(head, text=os.path.basename(os.path.dirname(self.ini_path))
                   + "  ·  OptiScaler.ini", style="Sub.TLabel").pack(anchor="w")
 
-        # zona con scroll
+        # scrollable area
         wrap = tk.Frame(self, bg=BG)
         wrap.pack(fill="both", expand=True, padx=10)
         self.canvas = tk.Canvas(wrap, bg=BG, highlightthickness=0, bd=0)
@@ -112,11 +112,11 @@ class Editor(tk.Toplevel):
 
         foot = ttk.Frame(self, style="E.TFrame")
         foot.pack(fill="x", padx=16, pady=12)
-        ttk.Button(foot, text="Guardar", style="Save.TButton",
+        ttk.Button(foot, text="Save", style="Save.TButton",
                    command=self._save).pack(side="right")
-        ttk.Button(foot, text="Cerrar", style="E.TButton",
+        ttk.Button(foot, text="Close", style="E.TButton",
                    command=self.destroy).pack(side="right", padx=(0, 8))
-        ttk.Button(foot, text="Restaurar", style="E.TButton",
+        ttk.Button(foot, text="Reset", style="E.TButton",
                    command=self._reset).pack(side="left")
 
     def _wheel(self, event):
@@ -213,10 +213,10 @@ class Editor(tk.Toplevel):
             except ValueError:
                 start = lo
 
-            # ttk.Scale.set() dispara el callback, asi que sin esta guarda el
-            # simple hecho de construir el control marcaria el ajuste como
-            # cambiado -- y guardar pisaria con el minimo todo lo que estaba
-            # en 'auto'. Solo cuenta lo que mueva la mano del usuario.
+            # ttk.Scale.set() fires the callback, so without this guard merely
+            # building the control would mark the setting as changed -- and
+            # saving would overwrite everything left at 'auto' with the slider
+            # minimum. Only a real drag counts.
             state = {"armed": False}
 
             def on_move(v, var=var, shown=shown, kind=kind, step=step,
@@ -252,12 +252,11 @@ class Editor(tk.Toplevel):
     def _overlay_note(self):
         box = ttk.Frame(self.inner, style="Card.TFrame")
         box.pack(fill="x", pady=(16, 14))
-        tk.Label(box, text="Solo dentro del juego  (Insert)", bg=CARD, fg=FG,
+        tk.Label(box, text="In-game only  (F8)", bg=CARD, fg=FG,
                  font=("Segoe UI Semibold", 9), anchor="w").pack(
                      fill="x", padx=12, pady=(10, 2))
-        tk.Label(box, text="Esto no existe como clave del INI, asi que ninguna "
-                           "ventana externa puede tocarlo. Se cambia en el "
-                           "overlay, en caliente.",
+        tk.Label(box, text="These are not INI keys, so no external window can "
+                           "touch them. Change them in the overlay, live.",
                  bg=CARD, fg=MUTED, anchor="w", justify="left", wraplength=520,
                  font=("Segoe UI", 8)).pack(fill="x", padx=12)
         for name, desc in opts.OVERLAY_ONLY:
@@ -270,7 +269,7 @@ class Editor(tk.Toplevel):
 
     # ------------------------------------------------------------------
     def _collect(self) -> dict[str, dict[str, str]]:
-        """Solo lo que difiere de lo que ya hay en el archivo."""
+        """Only what differs from what the file already holds."""
         changes: dict[str, dict[str, str]] = {}
         for (sect, key), var in self.vars.items():
             value = var.get().strip()
@@ -283,30 +282,30 @@ class Editor(tk.Toplevel):
     def _save(self):
         changes = self._collect()
         if not changes:
-            messagebox.showinfo("Ajustes", "No has cambiado nada.", parent=self)
+            messagebox.showinfo("Settings", "Nothing changed.", parent=self)
             return
         n = sum(len(v) for v in changes.values())
         try:
             apply_mod.set_ini(self.ini_path, changes)
         except OSError as e:
-            messagebox.showerror("Ajustes", f"No se pudo escribir el INI:\n{e}",
+            messagebox.showerror("Settings", f"Could not write the INI:\n{e}",
                                  parent=self)
             return
         self.data = apply_mod.read_ini(self.ini_path)
         if self.on_saved:
-            self.on_saved(f"{n} ajustes guardados en {self.game.name}")
-        messagebox.showinfo("Ajustes",
-                            f"{n} ajustes guardados.\n\n"
-                            "Los cambios entran al arrancar el juego. "
-                            "Para tocar en caliente, usa Insert dentro.",
+            self.on_saved(f"{n} settings saved to {self.game.name}")
+        messagebox.showinfo("Settings",
+                            f"{n} settings saved.\n\n"
+                            "Changes take effect when the game starts. "
+                            "For live tweaks, press F8 in game.",
                             parent=self)
 
     def _reset(self):
         if not messagebox.askyesno(
-                "Restaurar",
-                "Devolver todos estos ajustes a 'auto'?\n\n"
-                "Auto es el valor por defecto de OptiScaler, no "
-                "necesariamente lo que tenias antes.", parent=self):
+                "Reset",
+                "Return every setting here to 'auto'?\n\n"
+                "Auto is OptiScaler's default, not necessarily what "
+                "you had before.", parent=self):
             return
         changes: dict[str, dict[str, str]] = {}
         for gid, _t, _s, items in opts.GROUPS:
@@ -316,4 +315,4 @@ class Editor(tk.Toplevel):
         self.data = apply_mod.read_ini(self.ini_path)
         self._render()
         if self.on_saved:
-            self.on_saved(f"Ajustes restaurados en {self.game.name}")
+            self.on_saved(f"Settings reset in {self.game.name}")
