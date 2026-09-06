@@ -1,25 +1,25 @@
 """
-Conseguir nvngx_dlssnr.dll, que es lo que de verdad bloquea todo lo demas.
+Getting hold of nvngx_dlssnr.dll, which is what actually blocks everything else.
 
-COMPROBADO el 5/9/2026 descargando y abriendo el instalador oficial 616.64
-(938 MB, us.download.nvidia.com): el modelo NO viene en el driver. Los unicos
-nvngx_* del paquete son nvngx.dll, nvngx_dlssg.dll, nvngx_dlisr.dll y
-nvngx_update.exe. Ni rastro de dlssnr.
+VERIFIED on 5 Sept 2026 by downloading and opening the official 616.64
+installer (938 MB, us.download.nvidia.com): the model is NOT in the driver. The
+package's only nvngx_* files are nvngx.dll, nvngx_dlssg.dll, nvngx_dlisr.dll
+and nvngx_update.exe. No trace of dlssnr.
 
-El modelo lo distribuye CADA JUEGO que implementa DLSS 5. Se encontro por
-primera vez dentro de NBA 2K27 (158 MB, "NVIDIA DLSSNR" v310.8.0.0). Asi que
-la unica fuente limpia es un juego con DLSS 5 oficial ya instalado.
+EVERY GAME that implements DLSS 5 ships the model itself. It was first found
+inside NBA 2K27 (158 MB, "NVIDIA DLSSNR" v310.8.0.0), so the only clean source
+is an installed game with official DLSS 5.
 
-Formas de conseguirlo, de mas limpia a menos:
+Ways to get it, cleanest first:
 
-  1. Ya lo tienes (una copia previa en la cache).
-  2. Esta dentro de un juego con DLSS 5 oficial instalado -> se copia.
-  3. Esta dentro de un instalador de driver -> se extrae con 7-Zip.
-     Ninguno lo trae a dia de hoy, pero puede cambiar y sale gratis mirar.
-  4. No hay nada -> se dice la verdad en vez de mandar a por un driver inutil.
+  1. Already next to this program, or a previous copy in the cache.
+  2. Inside an installed game with official DLSS 5 -> copied out.
+  3. Inside a driver installer -> extracted with 7-Zip. None ships it today,
+     but that can change and looking costs nothing.
+  4. Nothing at all -> say so, instead of sending anyone after a useless driver.
 
-Nunca se descarga el DLL de repositorios de terceros. Es de NVIDIA, y los
-sitios que lo reempaquetan son justo los que hay que evitar.
+The DLL is never downloaded from third-party repositories. It is NVIDIA's, and
+the sites that repackage it are precisely the ones to avoid.
 """
 
 from __future__ import annotations
@@ -31,11 +31,11 @@ import glob
 import shutil
 import subprocess
 
-# El modelo pesa ~165 MB. Cualquier cosa muy por debajo no es el modelo.
+# The model is ~165 MB. Anything far below that is not the model.
 MIN_MODEL_MB = 100
 MODEL_NAME = "nvngx_dlssnr.dll"
 
-# Version minima de driver que lo incluye, segun las notas del fork.
+# Minimum driver version that supports it, per the fork release notes.
 MIN_DRIVER = 616.56
 
 SEVENZIP = [
@@ -44,7 +44,7 @@ SEVENZIP = [
     "7z",
 ]
 
-# Donde suele quedarse un instalador de driver despues de bajarlo.
+# Where a driver installer usually ends up after downloading.
 INSTALLER_DIRS = [
     os.path.expandvars(r"%USERPROFILE%\Downloads"),
     os.path.expandvars(r"%USERPROFILE%\Desktop"),
@@ -72,31 +72,31 @@ def _run(cmd: list[str], timeout: int = 900) -> subprocess.CompletedProcess:
 
 
 # --------------------------------------------------------------------------
-# 1. Buscar copias que ya existan
+# 1. Look for copies that already exist
 # --------------------------------------------------------------------------
 
-# Juegos que envian el modelo en sus propios archivos.
+# Games that ship the model inside their own files.
 #
-# Comprobado el 5/9/2026 contra el anuncio de NVIDIA: el unico con Neural
-# Rendering es NBA 2K27. Onimusha y Dawnwalker aparecen en el mismo articulo
-# pero solo reciben DLSS 4.5 (Super Resolution y Multi Frame Generation), asi
-# que NO traen nvngx_dlssnr.dll. La demo gratuita de Onimusha tampoco sirve.
+# Checked on 5 Sept 2026 against NVIDIA's announcement: the only title with
+# Neural Rendering is NBA 2K27. Onimusha and Dawnwalker appear in the same
+# article but only get DLSS 4.5 (Super Resolution and Multi Frame Generation),
+# so they do NOT carry nvngx_dlssnr.dll. Onimusha's free demo does not either.
 SHIPPING_GAMES = ["NBA 2K27"]
 
-# Juegos que suenan a DLSS 5 pero no traen el modelo. Se listan para no mandar
-# a nadie a instalar 100 GB para nada.
+# Games that sound like DLSS 5 but do not ship the model. Listed so nobody is
+# sent off to install 100 GB for nothing.
 NOT_SHIPPING = {
-    "Onimusha: Way of the Sword": "solo DLSS 4.5, la demo gratuita tampoco vale",
-    "The Blood of Dawnwalker": "solo DLSS 4.5",
-    "STAR WARS Zero Company": "solo DLSS 4.5",
+    "Onimusha: Way of the Sword": "DLSS 4.5 only, and the free demo too",
+    "The Blood of Dawnwalker": "DLSS 4.5 only",
+    "STAR WARS Zero Company": "DLSS 4.5 only",
 }
 
 
 def find_in_games(log=print) -> dict | None:
-    """Busca el modelo dentro de los juegos instalados.
+    """Looks for the model inside the installed games.
 
-    Es la fuente real: NBA 2K27 fue el primero en traerlo, y cualquier juego
-    con DLSS 5 oficial lo lleva en su carpeta.
+    This is the real source: NBA 2K27 was the first to ship it, and any game
+    with official DLSS 5 carries it in its own folder.
     """
     from dlss5_scan import steam_libraries, installed_games, file_version
 
@@ -127,18 +127,18 @@ def find_in_games(log=print) -> dict | None:
                 except OSError:
                     continue
                 if size >= MIN_MODEL_MB << 20:
-                    log(f"  encontrado en un juego: {full}")
+                    log(f"  found inside a game: {full}")
                     return {"path": full, "size": size,
                             "version": file_version(full)}
     return None
 
 
 def app_dir() -> str:
-    """Carpeta desde la que se ejecuta el programa.
+    """The folder the program runs from.
 
-    Con PyInstaller, sys.executable es el .exe y __file__ apunta al descomprimido
-    temporal, que no le sirve a nadie. Aqui interesa siempre la carpeta donde el
-    usuario dejo el ejecutable.
+    Under PyInstaller, sys.executable is the .exe while __file__ points at the
+    temporary extraction directory, which is useless to anyone. What matters
+    here is always the folder where the user put the executable.
     """
     if getattr(sys, "frozen", False):
         return os.path.dirname(os.path.abspath(sys.executable))
@@ -146,19 +146,19 @@ def app_dir() -> str:
 
 
 def find_existing(extra_roots: list[str] | None = None) -> dict:
-    """Busca un nvngx_dlssnr.dll ya presente en el sistema.
+    """Looks for an nvngx_dlssnr.dll already present on the system.
 
-    Tambien reconoce el caso que avisa el README del fork: un nvngx_dlssd.dll
-    de tamano de modelo no es Ray Reconstruction, es Neural Rendering con el
-    nombre cambiado.
+    Also recognises the case the fork README warns about: a model-sized
+    nvngx_dlssd.dll is not Ray Reconstruction, it is Neural Rendering under
+    the wrong name.
     """
     result = {"path": None, "size": 0, "version": None, "misnamed": None}
 
     roots = [
-        # Lo primero, junto al propio programa: es donde lo deja cualquiera que
-        # consiga el DLL por su cuenta, sin tener que buscar ninguna carpeta.
+        # First, next to the program itself: that is where anyone who gets the
+        # DLL on their own will drop it, with no folder to hunt for.
         app_dir(),
-        os.path.join(os.environ.get("LOCALAPPDATA", ""), "DLSS5", "modelo"),
+        os.path.join(os.environ.get("LOCALAPPDATA", ""), "DLSS5", "model"),
         r"C:\Windows\System32",
         r"C:\Windows\System32\DriverStore\FileRepository",
         r"C:\ProgramData\NVIDIA\NGX\models",
@@ -194,11 +194,11 @@ def find_existing(extra_roots: list[str] | None = None) -> dict:
 
 
 # --------------------------------------------------------------------------
-# 2. Extraerlo del instalador del driver
+# 2. Extract it from the driver installer
 # --------------------------------------------------------------------------
 
 def find_installers() -> list[dict]:
-    """Instaladores de driver NVIDIA que haya por el disco."""
+    """Any NVIDIA driver installers sitting on disk."""
     out: list[dict] = []
     seen: set[str] = set()
     for d in INSTALLER_DIRS:
@@ -219,7 +219,7 @@ def find_installers() -> list[dict]:
                 size = os.path.getsize(path)
             except OSError:
                 continue
-            if size < 200 << 20:          # un driver completo pasa de 500 MB
+            if size < 200 << 20:          # a full driver package exceeds 500 MB
                 continue
             seen.add(key)
             ver = re.search(r"(\d{3}\.\d{2})", name)
@@ -230,10 +230,10 @@ def find_installers() -> list[dict]:
 
 
 def extract_from_installer(installer: str, dest_dir: str, log=print) -> str | None:
-    """Saca nvngx_dlssnr.dll de dentro del .exe del driver con 7-Zip.
+    """Pulls nvngx_dlssnr.dll out of the driver .exe with 7-Zip.
 
-    El instalador de NVIDIA es un archivo 7z con cabecera ejecutable, asi que
-    7-Zip lo abre directamente sin instalar nada.
+    NVIDIA's installer is a 7z archive with an executable header, so 7-Zip
+    opens it directly without installing anything.
     """
     sz = _sevenzip()
     if not sz:
@@ -244,7 +244,7 @@ def extract_from_installer(installer: str, dest_dir: str, log=print) -> str | No
     os.makedirs(dest_dir, exist_ok=True)
     log(f"Abriendo {os.path.basename(installer)} con 7-Zip...")
 
-    # Primero se mira si el modelo esta dentro, sin extraer nada.
+    # First check whether the model is inside, without extracting anything.
     listing = _run([sz, "l", installer, "-r", f"*{MODEL_NAME}"], timeout=600)
     if MODEL_NAME not in (listing.stdout or "").lower():
         log(f"  {MODEL_NAME} no esta en este instalador.")
@@ -270,8 +270,8 @@ def extract_from_installer(installer: str, dest_dir: str, log=print) -> str | No
 
 
 def cache_model(src: str, log=print) -> str:
-    """Guarda una copia del modelo en la cache para no repetir la extraccion."""
-    dest_dir = os.path.join(os.environ.get("LOCALAPPDATA", ""), "DLSS5", "modelo")
+    """Caches a copy of the model so the extraction is not repeated."""
+    dest_dir = os.path.join(os.environ.get("LOCALAPPDATA", ""), "DLSS5", "model")
     os.makedirs(dest_dir, exist_ok=True)
     dest = os.path.join(dest_dir, MODEL_NAME)
     if os.path.normcase(src) == os.path.normcase(dest):
@@ -283,13 +283,13 @@ def cache_model(src: str, log=print) -> str:
 
 
 # --------------------------------------------------------------------------
-# Orquestador
+# Orchestrator
 # --------------------------------------------------------------------------
 
 def obtain(log=print, allow_extract: bool = True) -> dict:
-    """Consigue el modelo por el mejor medio disponible.
+    """Obtains the model by the best available means.
 
-    Devuelve {'path', 'source', 'detail'}; path es None si no se pudo.
+    Returns {'path', 'source', 'detail'}; path is None when it could not.
     """
     found = find_existing()
     if found["path"]:
@@ -306,7 +306,7 @@ def obtain(log=print, allow_extract: bool = True) -> dict:
     if not allow_extract:
         return {"path": None, "source": None, "detail": "no encontrado"}
 
-    # La fuente real: un juego que ya lo trae.
+    # The real source: a game that already ships it.
     log("Buscando el modelo dentro de los juegos instalados...")
     in_game = find_in_games(log=log)
     if in_game:
@@ -324,7 +324,7 @@ def obtain(log=print, allow_extract: bool = True) -> dict:
         try:
             got = extract_from_installer(
                 inst["path"],
-                os.path.join(os.environ.get("LOCALAPPDATA", ""), "DLSS5", "modelo"),
+                os.path.join(os.environ.get("LOCALAPPDATA", ""), "DLSS5", "model"),
                 log=log)
         except Exception as e:                      # noqa: BLE001
             log(f"  fallo: {e}")
@@ -338,7 +338,7 @@ def obtain(log=print, allow_extract: bool = True) -> dict:
 
 
 def driver_ok(driver: str | None) -> bool | None:
-    """True/False si el driver es suficientemente nuevo; None si no se sabe."""
+    """True/False whether the driver is new enough; None when unknown."""
     if not driver:
         return None
     try:
@@ -348,7 +348,7 @@ def driver_ok(driver: str | None) -> bool | None:
 
 
 def help_text(driver: str | None) -> str:
-    """Que hacer cuando no aparece el modelo. Sin mandar a callejones sin salida."""
+    """What to do when the model does not turn up. No dead ends."""
     ok = driver_ok(driver)
     if ok is False:
         return (f"Tu driver ({driver}) es anterior al 616.56, el minimo que "

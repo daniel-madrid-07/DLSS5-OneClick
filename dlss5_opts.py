@@ -1,150 +1,154 @@
 """
-Catalogo de ajustes editables, con sus tipos y rangos reales.
+Catalogue of editable settings, with their real types and ranges.
 
-Todo lo de aqui esta sacado leyendo OptiScaler.ini de v0.2.0 clave por clave.
-Los rangos son los que documenta el propio archivo, no estimaciones.
+Everything here was taken by reading v0.2.0's OptiScaler.ini key by key. The
+ranges are the ones the file itself documents, not guesses.
 
-Lo que NO esta aqui, porque no existe como clave del INI y solo vive en el
-overlay del juego (Insert):
-  - El proxy reversible (Off / Neutwo / Hybrid, composed o replace)
-  - El anclaje multipunto del punto de blanco
-  - Hold frame para comparar ajustes
-Se avisa de ello en la interfaz en vez de fingir que se pueden tocar.
+What is NOT here, because it does not exist as an INI key and lives only in the
+in-game overlay (F8):
+  - The reversible proxy (Off / Neutwo / Hybrid, composed or replace)
+  - Multi-point white-point anchoring
+  - Hold frame, for comparing settings on one frozen frame
+The UI says so instead of pretending they can be touched from outside.
 """
 
 from __future__ import annotations
 
-# Tipos de control:
-#   bool   -> interruptor
-#   float  -> deslizador (min, max, paso)
-#   int    -> deslizador entero
-#   choice -> desplegable [(valor_ini, etiqueta), ...]
+# Control types:
+#   bool   -> dropdown auto/true/false
+#   float  -> slider (min, max, step)
+#   int    -> integer slider
+#   choice -> dropdown [(ini_value, label), ...]
 
 DOWNSCALERS = [("0", "FSR1"), ("1", "Bicubic"), ("2", "Catmull-Rom"),
                ("3", "Lanczos2"), ("4", "Lanczos3"), ("5", "Kaiser2"),
                ("6", "Kaiser3"), ("7", "MAGIC")]
 
-DLSS_PRESETS = [("0", "Por defecto"), ("11", "K  (transformer)"),
+DLSS_PRESETS = [("0", "Default"), ("11", "K  (transformer)"),
                 ("12", "L"), ("13", "M"), ("14", "N"), ("15", "O"),
                 ("3", "C"), ("5", "E"), ("6", "F"), ("7", "G")]
 
-# Cada grupo: (id, titulo, subtitulo, [ajustes])
-# Cada ajuste: (seccion_ini, clave, etiqueta, tipo, extra, ayuda)
+# Windows virtual-key codes for the overlay shortcut.
+OVERLAY_KEYS = [("0x77", "F8  (default here)"), ("0x78", "F9"),
+                ("0x7A", "F11"), ("0x7B", "F12"), ("0x2D", "Insert"),
+                ("0x24", "Home"), ("0x08", "Backspace"), ("-1", "None")]
+
+# Each group: (id, title, subtitle, [settings])
+# Each setting: (ini_section, key, label, kind, extra, help)
 
 GROUPS = [
-    ("nr", "Neural Rendering", "El paso de DLSS 5. Necesita nvngx_dlssnr.dll.", [
-        ("DlssNr", "Enabled", "Activado", "bool", None,
-         "Enciende el paso neuronal. Sin el modelo no arranca aunque este en true."),
-        ("DlssNr", "TransferStrength", "Fuerza del detalle", "float", (0.0, 2.0, 0.05),
-         "Cuanto se mueve el fotograma hacia la imagen del modelo. 0 devuelve "
-         "exactamente lo que produjo el upscaler; 1 es la imagen del modelo; por "
-         "encima sigue mas alla de lo que el modelo pidio."),
-        ("DlssNr", "ColourStrength", "Fuerza del color", "float", (0.0, 4.0, 0.05),
-         "Si llega tambien el color del modelo o solo su luz. 0 mantiene el tono "
-         "exacto del juego. Valores muy altos pueden parpadear."),
-        ("DlssNr", "MaxRatio", "Tope de brillo", "float", (1.0, 4.0, 0.1),
-         "Lo maximo que el paso puede aclarar un pixel. Evita que una luz se "
-         "convierta en celdas de colores. Oscurecer no tiene tope."),
-        ("DlssNr", "WorkingScale", "Resolucion del modelo", "float", (0.25, 2.0, 0.05),
-         "Fraccion del fotograma a la que trabaja el modelo. El coste cae con el "
-         "cuadrado. Por encima de 1.0 hace supersampling: mas limpio, mas caro."),
-        ("DlssNr", "ScalingDownscaler", "Filtro de reduccion", "choice", DOWNSCALERS,
-         "Solo se usa cuando la resolucion del modelo pasa de 1.0. Lanczos3 es "
-         "el valor por defecto y el recomendado."),
-        ("DlssNr", "WhitePointScale", "Punto de blanco", "float", (0.1, 4.0, 0.05),
-         "Multiplica el blanco antes de que el modelo vea el fotograma. Es el "
-         "control de paper white."),
-        ("DlssNr", "Intensity", "Intensidad", "float", (0.0, 2.0, 0.05),
-         "Parametro propio de NVIDIA, sin documentar."),
-        ("DlssNr", "AutoMask", "Mascara automatica", "bool", None,
-         "Deja que el modelo reconozca objetos y se aplique de forma selectiva."),
-        ("DlssNr", "DebugView", "Vista de depuracion", "choice",
-         [("0", "Apagada"), ("1", "Lo que ve el modelo"),
-          ("2", "Su respuesta cruda"), ("3", "Diferencia x20")],
-         "La opcion 3 es la util: muestra lo que ha cambiado amplificado. "
-         "Un gris plano significa que no esta tocando nada."),
+    ("nr", "Neural Rendering", "The DLSS 5 pass. Needs nvngx_dlssnr.dll.", [
+        ("DlssNr", "Enabled", "Enabled", "bool", None,
+         "Turns the neural pass on. Without the model it will not start even "
+         "when set to true."),
+        ("DlssNr", "TransferStrength", "Detail strength", "float", (0.0, 2.0, 0.05),
+         "How far the frame moves toward the model's picture. 0 gives back "
+         "exactly what the upscaler produced; 1 is the model's picture; above "
+         "that it carries on past what the model asked for."),
+        ("DlssNr", "ColourStrength", "Colour strength", "float", (0.0, 4.0, 0.05),
+         "Whether the model's colour arrives with its light. 0 keeps the game's "
+         "own hue exactly. Very high values can flicker."),
+        ("DlssNr", "MaxRatio", "Highlight guard", "float", (1.0, 4.0, 0.1),
+         "The most the pass may brighten any pixel. Stops a bright light from "
+         "turning into coloured cells. Darkening is not capped."),
+        ("DlssNr", "WorkingScale", "Model resolution", "float", (0.25, 2.0, 0.05),
+         "What fraction of the frame the model works at. Cost falls with the "
+         "square. Above 1.0 it supersamples: cleaner, more expensive."),
+        ("DlssNr", "ScalingDownscaler", "Downscale filter", "choice", DOWNSCALERS,
+         "Only used when model resolution goes above 1.0. Lanczos3 is the "
+         "default and the recommended one."),
+        ("DlssNr", "WhitePointScale", "White point", "float", (0.1, 4.0, 0.05),
+         "Multiplies the white point before the model sees the frame. This is "
+         "the paper-white control."),
+        ("DlssNr", "Intensity", "Intensity", "float", (0.0, 2.0, 0.05),
+         "One of NVIDIA's own parameters. Undocumented."),
+        ("DlssNr", "AutoMask", "Automatic masking", "bool", None,
+         "Lets the model recognise objects and apply itself selectively."),
+        ("DlssNr", "DebugView", "Debug view", "choice",
+         [("0", "Off"), ("1", "What the model sees"),
+          ("2", "Its raw answer"), ("3", "Difference x20")],
+         "Option 3 is the useful one: it shows what changed, amplified. A flat "
+         "grey frame means the pass is doing nothing."),
     ]),
 
-    ("upscaler", "Upscaler", "Que tecnica de escalado usa el juego.", [
+    ("upscaler", "Upscaler", "Which scaling technique the game uses.", [
         ("Upscalers", "Dx12Upscaler", "DirectX 12", "choice",
-         [("auto", "Automatico"), ("dlss", "DLSS"), ("xess", "XeSS"),
+         [("auto", "Automatic"), ("dlss", "DLSS"), ("xess", "XeSS"),
           ("ffx", "FSR 3.1 / 4.x"), ("fsr22", "FSR 2.2"), ("fsr21", "FSR 2.1")],
-         "Automatico elige DLSS en tarjetas NVIDIA."),
+         "Automatic picks DLSS on NVIDIA cards."),
         ("Upscalers", "Dx11Upscaler", "DirectX 11", "choice",
-         [("auto", "Automatico"), ("dlss", "DLSS"), ("xess", "XeSS"),
-          ("fsr22", "FSR 2.2 nativo"), ("fsr31", "FSR 3.1 nativo")], ""),
+         [("auto", "Automatic"), ("dlss", "DLSS"), ("xess", "XeSS"),
+          ("fsr22", "FSR 2.2 native"), ("fsr31", "FSR 3.1 native")], ""),
         ("Upscalers", "VulkanUpscaler", "Vulkan", "choice",
-         [("auto", "Automatico"), ("dlss", "DLSS"), ("xess", "XeSS nativo"),
-          ("ffx", "FSR 2.3 / 3.1 nativo"), ("fsr21", "FSR 2.1 nativo")], ""),
-        ("DLSS", "RenderPresetOverride", "Forzar preset de DLSS", "bool", None,
-         "Permite imponer un preset concreto en lugar del que elija el juego."),
-        ("DLSS", "RenderPresetForAll", "Preset para todos los modos", "choice",
+         [("auto", "Automatic"), ("dlss", "DLSS"), ("xess", "XeSS native"),
+          ("ffx", "FSR 2.3 / 3.1 native"), ("fsr21", "FSR 2.1 native")], ""),
+        ("DLSS", "RenderPresetOverride", "Force a DLSS preset", "bool", None,
+         "Lets you impose one preset instead of whatever the game picks."),
+        ("DLSS", "RenderPresetForAll", "Preset for all modes", "choice",
          DLSS_PRESETS,
-         "K es el modelo transformer actual. Solo tiene efecto con la opcion "
-         "de arriba activada."),
+         "K is the current transformer model. Only has an effect with the "
+         "option above turned on."),
     ]),
 
-    ("quality", "Calidad y nitidez", "Escalado de salida y afilado.", [
-        ("OutputScaling", "Enabled", "Escalado de salida", "bool", None,
-         "Renderiza por encima de la resolucion de pantalla y reduce despues. "
-         "Solo DX12 y DX11-sobre-DX12."),
-        ("OutputScaling", "Multiplier", "Multiplicador", "float", (0.5, 3.0, 0.1),
-         "Cuanto se renderiza por encima. 1.5 es el valor por defecto."),
-        ("OutputScaling", "Downscaler", "Filtro de reduccion", "choice", DOWNSCALERS, ""),
-        ("CAS", "Enabled", "Afilado RCAS", "bool", None,
-         "Afilado por contraste adaptativo."),
-        ("Sharpness", "OverrideSharpness", "Forzar nitidez", "bool", None,
-         "Ignora el valor de nitidez que pida el juego."),
-        ("Sharpness", "Sharpness", "Nitidez", "float", (0.0, 1.0, 0.05),
-         "0.3 por defecto. Con RCAS el limite util llega a 1.3."),
-        ("CAS", "MotionSharpnessEnabled", "Nitidez en movimiento", "bool", None,
-         "Anade o quita afilado segun cuanto se mueva cada pixel."),
-        ("CAS", "MotionSharpness", "Cantidad en movimiento", "float", (-1.3, 1.3, 0.05),
-         "Negativo quita afilado al moverse; positivo lo anade."),
+    ("quality", "Quality & sharpening", "Output scaling and sharpening.", [
+        ("OutputScaling", "Enabled", "Output scaling", "bool", None,
+         "Renders above display resolution and scales down after. DX12 and "
+         "DX11-on-DX12 only."),
+        ("OutputScaling", "Multiplier", "Multiplier", "float", (0.5, 3.0, 0.1),
+         "How far above native to render. 1.5 is the default."),
+        ("OutputScaling", "Downscaler", "Downscale filter", "choice", DOWNSCALERS, ""),
+        ("CAS", "Enabled", "RCAS sharpening", "bool", None,
+         "Contrast-adaptive sharpening."),
+        ("Sharpness", "OverrideSharpness", "Force sharpness", "bool", None,
+         "Ignores whatever sharpness value the game asks for."),
+        ("Sharpness", "Sharpness", "Sharpness", "float", (0.0, 1.0, 0.05),
+         "0.3 by default. With RCAS the useful ceiling reaches 1.3."),
+        ("CAS", "MotionSharpnessEnabled", "Motion sharpness", "bool", None,
+         "Adds or removes sharpening according to how far a pixel moves."),
+        ("CAS", "MotionSharpness", "Motion amount", "float", (-1.3, 1.3, 0.05),
+         "Negative removes sharpening in motion; positive adds it."),
     ]),
 
-    ("fg", "Frame Generation", "Fotogramas intercalados. Ojo con la latencia.", [
-        ("FrameGen", "Enabled", "Activado", "bool", None,
-         "Enciende la generacion de fotogramas."),
-        ("FrameGen", "FGOutput", "Metodo", "choice",
-         [("auto", "Automatico"), ("dlssg", "DLSS-G (NVIDIA)"),
+    ("fg", "Frame Generation", "Interpolated frames. Mind the latency.", [
+        ("FrameGen", "Enabled", "Enabled", "bool", None,
+         "Turns frame generation on."),
+        ("FrameGen", "FGOutput", "Method", "choice",
+         [("auto", "Automatic"), ("dlssg", "DLSS-G (NVIDIA)"),
           ("fsrfg", "FSR-FG"), ("xefg", "XeSS-FG"), ("optifg", "OptiFG")],
-         "DLSS-G necesita que el juego ya lo soporte."),
-        ("FrameGen", "AllowedFrameAhead", "Fotogramas de adelanto", "int", (1, 3, 1),
-         "Cuantos fotogramas puede adelantarse. Menos adelanto, menos latencia."),
-        ("Framerate", "FramerateLimit", "Limite de FPS", "float", (0.0, 360.0, 5.0),
-         "0 lo desactiva. Usa Reflex cuando esta disponible, asi que baja la "
-         "latencia mejor que un limitador externo."),
-        ("FrameGen", "DebugView", "Vista de depuracion", "bool", None,
-         "Marca visualmente los fotogramas generados."),
+         "DLSS-G requires the game to support it already."),
+        ("FrameGen", "AllowedFrameAhead", "Frames ahead", "int", (1, 3, 1),
+         "How far ahead it may run. Less lead, less latency."),
+        ("Framerate", "FramerateLimit", "FPS limit", "float", (0.0, 360.0, 5.0),
+         "0 disables it. Uses Reflex where available, so it lowers latency "
+         "better than an external limiter."),
+        ("FrameGen", "DebugView", "Debug view", "bool", None,
+         "Visually marks the generated frames."),
     ]),
 
-    ("system", "Sistema", "Pantalla y diagnostico.", [
-        ("HDR", "ForceHDR", "Forzar HDR", "bool", None,
-         "Fuerza el espacio de color HDR. Solo si tu pantalla lo admite."),
-        ("HDR", "UseHDR10", "Usar HDR10", "bool", None,
-         "R10G10B10A2 en lugar de R16G16B16A16 en coma flotante."),
-        ("V-Sync", "OverrideVsync", "Controlar V-Sync", "bool", None,
-         "Permite que OptiScaler gestione la sincronia vertical."),
-        ("Menu", "OverlayMenu", "Overlay dentro del juego", "bool", None,
-         "El menu de OptiScaler. Sin esto pierdes el proxy reversible y los "
-         "sliders en caliente."),
-        ("Menu", "ShortcutKey", "Tecla del overlay", "choice",
-         [("0x77", "F8  (por defecto aqui)"), ("0x78", "F9"),
-          ("0x7A", "F11"), ("0x7B", "F12"), ("0x2D", "Insert"),
-          ("0x24", "Inicio"), ("0x08", "Retroceso"), ("-1", "Ninguna")],
-         "Cambiala si el juego ya usa F8 para otra cosa."),
-        ("Menu", "Scale", "Tamano del overlay", "float", (0.5, 2.0, 0.1),
-         "Escala del menu dentro del juego. Util en 4K, donde se queda pequeno."),
-        ("Log", "LogToFile", "Registro a archivo", "bool", None,
-         "Escribe OptiScaler.log junto al juego. Hace falta activarlo antes "
-         "de reportar cualquier problema. Cuesta algo de rendimiento."),
+    ("system", "System", "Overlay, display and diagnostics.", [
+        ("Menu", "ShortcutKey", "Overlay key", "choice", OVERLAY_KEYS,
+         "Which key opens the OptiScaler overlay in game. Change it if the "
+         "game already uses F8 for something else."),
+        ("Menu", "OverlayMenu", "In-game overlay", "bool", None,
+         "OptiScaler's own menu. Without it you lose the reversible proxy and "
+         "the live sliders."),
+        ("Menu", "Scale", "Overlay size", "float", (0.5, 2.0, 0.1),
+         "Scale of the in-game menu. Useful at 4K, where it comes out small."),
+        ("HDR", "ForceHDR", "Force HDR", "bool", None,
+         "Forces the HDR colour space. Only if your display supports it."),
+        ("HDR", "UseHDR10", "Use HDR10", "bool", None,
+         "R10G10B10A2 instead of R16G16B16A16 float."),
+        ("V-Sync", "OverrideVsync", "Control V-Sync", "bool", None,
+         "Lets OptiScaler manage vertical sync."),
+        ("Log", "LogToFile", "Log to file", "bool", None,
+         "Writes OptiScaler.log next to the game. Turn it on before reporting "
+         "any problem. Costs a little performance."),
     ]),
 ]
 
 
 def all_settings():
-    """Aplana el catalogo: [(grupo_id, seccion, clave, etiqueta, tipo, extra, ayuda)]"""
+    """Flattens the catalogue: [(group, section, key, label, kind, extra, help)]"""
     out = []
     for gid, _t, _s, items in GROUPS:
         for sect, key, label, kind, extra, help_ in items:
@@ -160,20 +164,20 @@ def group_of(section: str, key: str) -> str | None:
     return None
 
 
-# Ajustes que solo existen dentro del overlay del juego. Se muestran para que
-# nadie los busque aqui sin encontrarlos.
+# Settings that exist only inside the in-game overlay. Listed so nobody hunts
+# for them here and comes up empty.
 OVERLAY_ONLY = [
-    ("Proxy reversible",
-     "Colour -> Off / Neutwo / Hybrid, en variante composed o replace. "
-     "\"Hybrid proxy + composed\" es el recomendado de v0.2.0: mantiene los "
-     "medios tonos y recupera el detalle de las luces."),
-    ("Anclaje del punto de blanco",
-     "Varios puntos de calibracion para que el blanco aguante cuando cambia "
-     "mucho la luz de la escena."),
+    ("Reversible proxy",
+     "Colour -> Off / Neutwo / Hybrid, in composed or replace form. "
+     "\"Hybrid proxy + composed\" is the v0.2.0 recommendation: it keeps the "
+     "midtones and recovers the detail crushed in highlights."),
+    ("White-point anchoring",
+     "Several calibration points, so white holds when the scene's lighting "
+     "changes a lot."),
     ("Hold frame",
-     "Congela el fotograma sobre el que trabaja el modelo para comparar dos "
-     "ajustes sobre la misma imagen."),
+     "Freezes the frame the model works on, so two settings can be compared "
+     "on the same image."),
     ("Apply the model",
-     "Con el fotograma congelado, apaga el efecto sin parar el modelo: la "
-     "misma imagen con y sin Neural Rendering."),
+     "With a frame held, turns the effect off without stopping the model: the "
+     "same frozen frame with and without Neural Rendering."),
 ]

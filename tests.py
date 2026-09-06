@@ -1,10 +1,10 @@
 """
-Pruebas de la parte peligrosa: que instalar y revertir deje la carpeta igual.
+Tests for the dangerous part: install and revert must leave the folder identical.
 
-Monta un juego falso con un archivo que va a ser sobrescrito, instala encima,
-comprueba el resultado y revierte. Si un solo byte cambia, falla.
+Builds a fake game with a file that will be overwritten, installs on top,
+verifies the result and reverts. If a single byte changes, it fails.
 
-    python pruebas.py
+    python tests.py
 """
 
 import os
@@ -23,7 +23,7 @@ OK, FAIL = [], []
 
 def check(name: str, cond: bool, detail: str = ""):
     (OK if cond else FAIL).append(name)
-    mark = "  ok  " if cond else " FALLO"
+    mark = "  ok  " if cond else " FAIL "
     print(f"[{mark}] {name}" + (f"   -> {detail}" if detail and not cond else ""))
 
 
@@ -43,62 +43,62 @@ def hash_tree(root: str) -> dict:
 
 
 def build_fake_game(base: str) -> str:
-    """Un juego plausible: ejecutable real, DLSS presente, y un OptiScaler.ini
-    previo que la instalacion debera respaldar y la marcha atras restaurar."""
-    root = os.path.join(base, "JuegoFalso")
+    """A plausible game: real executable, DLSS present, and a pre-existing
+    OptiScaler.ini that install must back up and revert must restore."""
+    root = os.path.join(base, "FakeGame")
     os.makedirs(root, exist_ok=True)
 
     shutil.copy2(r"C:\Windows\System32\notepad.exe",
-                 os.path.join(root, "JuegoFalso.exe"))
-    # Un nvngx_dlss.dll cualquiera basta: solo se comprueba el nombre.
+                 os.path.join(root, "FakeGame.exe"))
+    # Any nvngx_dlss.dll will do: only the file name is checked.
     shutil.copy2(r"C:\Windows\System32\d3d12.dll",
                  os.path.join(root, "nvngx_dlss.dll"))
-    # dxgi.dll ocupado -> el proxy debe elegir otro nombre.
+    # dxgi.dll taken -> the proxy must pick another name.
     shutil.copy2(r"C:\Windows\System32\version.dll",
                  os.path.join(root, "dxgi.dll"))
     with open(os.path.join(root, "OptiScaler.ini"), "w", encoding="utf-8") as f:
-        f.write("; ini previo del usuario, no debe perderse\n[Menu]\nScale=1.5\n")
+        f.write("; user previous ini, must not be lost\n[Menu]\nScale=1.5\n")
     return root
 
 
 def main() -> int:
     tmp = tempfile.mkdtemp(prefix="dlss5_test_")
-    print(f"Carpeta de pruebas: {tmp}\n")
+    print(f"Test folder: {tmp}\n")
     try:
         root = build_fake_game(tmp)
         before = hash_tree(root)
-        print(f"Juego falso con {len(before)} archivos.\n")
+        print(f"Fake game with {len(before)} files.\n")
 
-        # --- deteccion ---------------------------------------------------
-        g = scan.analyze(root, "Juego Falso")
-        check("detecta el ejecutable", os.path.basename(g.exe or "") == "JuegoFalso.exe",
+        # --- detection ---------------------------------------------------
+        g = scan.analyze(root, "Fake Game")
+        check("finds the executable", os.path.basename(g.exe or "") == "FakeGame.exe",
               str(g.exe))
-        check("detecta DLSS", "dlss" in g.upscalers, str(g.upscalers))
-        check("nivel A", g.tier == "A", f"{g.tier}: {g.verdict}")
+        check("detects DLSS", "dlss" in g.upscalers, str(g.upscalers))
+        check("tier A", g.tier == "A", f"{g.tier}: {g.verdict}")
 
-        # --- eleccion de proxy -------------------------------------------
+        # --- proxy choice -------------------------------------------
         proxy = apply_mod.pick_proxy(g.exe_dir)
-        check("evita el dxgi.dll ocupado", proxy != "dxgi.dll", proxy)
+        check("avoids the taken dxgi.dll", proxy != "dxgi.dll", proxy)
 
-        # --- instalacion --------------------------------------------------
-        print("\nInstalando (usa la cache si el paquete ya esta bajado)...")
-        manifest = apply_mod.install(g, preset="equilibrado", kind="dlssnr",
+        # --- install --------------------------------------------------
+        print("\nInstalling (uses the cache if already downloaded)...")
+        manifest = apply_mod.install(g, preset="balanced", kind="dlssnr",
                                      neural=True, copy_model=True,
                                      log=lambda m: print("   " + str(m)))
 
         after_install = hash_tree(root)
-        check("OptiScaler colocado como proxy",
+        check("OptiScaler placed as proxy",
               os.path.isfile(os.path.join(root, manifest["proxy"])), manifest["proxy"])
-        check("nvngx.dll_dlssnr.dll copiado",
+        check("nvngx.dll_dlssnr.dll copied",
               os.path.isfile(os.path.join(root, "nvngx.dll_dlssnr.dll")))
-        check("binarios en la subcarpeta OptiScaler",
+        check("binaries in the OptiScaler subfolder",
               os.path.isdir(os.path.join(root, "OptiScaler")))
-        check("manifiesto escrito", apply_mod.read_manifest(root) is not None)
-        check("el ini previo quedo respaldado",
+        check("manifest written", apply_mod.read_manifest(root) is not None)
+        check("the previous ini was backed up",
               "OptiScaler.ini" in manifest["respaldados"],
               str(list(manifest["respaldados"])))
 
-        # --- contenido del ini -------------------------------------------
+        # --- ini contents -------------------------------------------
         ini = os.path.join(root, "OptiScaler.ini")
         with open(ini, "r", encoding="utf-8", errors="replace") as f:
             text = f.read()
@@ -106,142 +106,142 @@ def main() -> int:
         check("[DlssNr] Enabled=true", "\nEnabled=true" in sec)
         check("[DlssNr] TransferStrength=1.0", "\nTransferStrength=1.0" in sec)
         check("[DlssNr] WorkingScale=1.0", "\nWorkingScale=1.0" in sec)
-        check("no quedan claves duplicadas",
+        check("no duplicated keys",
               sec.count("\nEnabled=") == 1, str(sec.count("\nEnabled=")))
-        check("los comentarios del ini sobreviven",
+        check("the ini comments survive",
               "; DLSS 5 Neural Rendering" in text)
 
-        check("[DlssNr] ToggleKey escrito (F10)", "\nToggleKey=0x79" in sec)
+        check("[DlssNr] ToggleKey written (F10)", "\nToggleKey=0x79" in sec)
 
-        # --- reanalisis ---------------------------------------------------
-        g2 = scan.analyze(root, "Juego Falso")
-        check("reconoce su propia instalacion", g2.installed_proxy is not None,
+        # --- re-analysis ---------------------------------------------------
+        g2 = scan.analyze(root, "Fake Game")
+        check("recognises its own install", g2.installed_proxy is not None,
               str(g2.installed_proxy))
 
-        # --- clasificacion v0.2.0 -----------------------------------------
-        # NR ya no exige DLSS ni DirectX. Un juego solo-Vulkan con FSR debe
-        # quedar como aplicable, no descartado.
+        # --- v0.2.0 classification -----------------------------------------
+        # NR no longer requires DLSS or DirectX. A Vulkan-only game with FSR
+        # must come out applicable, not discarded.
         vk = scan.Game(name="vk", root=root, exe="x", exe_dir=root,
                        apis={"vulkan"}, upscalers={"fsr": "FSR"})
         scan._classify(vk)
-        check("Vulkan + FSR es aplicable (v0.2.0)", vk.tier == "B",
+        check("Vulkan + FSR is applicable (v0.2.0)", vk.tier == "B",
               f"{vk.tier}: {vk.verdict}")
 
         xess = scan.Game(name="xe", root=root, exe="x", exe_dir=root,
                          apis={"dx12"}, upscalers={"xess": "XeSS"})
         scan._classify(xess)
-        check("XeSS sin DLSS es aplicable", xess.tier == "B",
+        check("XeSS without DLSS is applicable", xess.tier == "B",
               f"{xess.tier}: {xess.verdict}")
 
         nada = scan.Game(name="n", root=root, exe="x", exe_dir=root,
                          apis={"dx12"}, upscalers={})
         scan._classify(nada)
-        check("sin upscaler sigue siendo no", nada.tier == "D", nada.tier)
+        check("no upscaler is still a no", nada.tier == "D", nada.tier)
 
-        # ya no se fuerza el upscaler de salida en juegos FSR/XeSS
-        cfg = apply_mod.build_config(xess, "equilibrado", neural=True)
-        check("no se fuerza Dx12Upscaler", "Upscalers" not in cfg,
+        # the output upscaler is no longer forced on FSR/XeSS games
+        cfg = apply_mod.build_config(xess, "balanced", neural=True)
+        check("Dx12Upscaler is not forced", "Upscalers" not in cfg,
               str(cfg.get("Upscalers")))
 
-        # --- modelo --------------------------------------------------------
-        check("preset de supersampling existe",
+        # --- model --------------------------------------------------------
+        check("supersampling preset exists",
               "supersampling" in apply_mod.PRESETS)
         ss = apply_mod.PRESETS["supersampling"]["DlssNr"]
-        check("supersampling pide WorkingScale > 1",
+        check("supersampling asks for WorkingScale > 1",
               float(ss["WorkingScale"]) > 1.0, ss["WorkingScale"])
-        check("supersampling fija el downscaler",
+        check("supersampling sets the downscaler",
               ss.get("ScalingDownscaler") == "4", str(ss.get("ScalingDownscaler")))
-        check("busca el modelo en los juegos, no solo en el driver",
+        check("looks for the model in games, not only the driver",
               callable(getattr(model_mod, "find_in_games", None)))
 
-        # El flujo del usuario nuevo: deja el DLL junto al programa y ya.
-        # app_dir() tiene que ser la carpeta del .exe, no la del descomprimido
-        # temporal de PyInstaller.
-        check("app_dir apunta a una carpeta real",
+        # The new-user flow: drop the DLL next to the program and done.
+        # app_dir() must be the .exe folder, not the temporary directory
+        # PyInstaller unpacks into.
+        check("app_dir points at a real folder",
               os.path.isdir(model_mod.app_dir()), model_mod.app_dir())
-        # Se comprueba de verdad: un archivo del tamano del modelo colocado en
-        # una carpeta pasada como raiz extra tiene que encontrarse.
-        # Archivo disperso: ocupa el tamano declarado sin escribir 100 MB.
-        # Se hace deliberadamente MAS GRANDE que cualquier copia real que pueda
-        # haber en esta maquina, porque find_existing se queda con la mayor.
+        # Actually verified: a model-sized file placed in a folder passed as an
+        # extra root must be found.
+        # Sparse file: claims the size without writing 100 MB. Deliberately made
+        # LARGER than any real copy on this machine, because find_existing
+        # keeps the biggest one.
         falso = os.path.join(root, "nvngx_dlssnr.dll")
         grande = 400 << 20
         with open(falso, "wb") as f:
             f.seek(grande - 1)
             f.write(b"\0")
         hallado = model_mod.find_existing(extra_roots=[root])
-        check("encuentra un modelo dejado en una carpeta",
+        check("finds a model dropped in a folder",
               hallado["path"] and os.path.normcase(hallado["path"])
               == os.path.normcase(falso), str(hallado["path"]))
         os.remove(falso)
 
-        # Y uno por debajo del minimo no debe colarse como modelo.
+        # And one below the minimum must not pass as the model.
         pequeno = os.path.join(root, "nvngx_dlssnr.dll")
         with open(pequeno, "wb") as f:
             f.write(b"\0" * 1024)
         tras = model_mod.find_existing(extra_roots=[root])
-        check("descarta archivos demasiado pequenos para ser el modelo",
+        check("rejects files too small to be the model",
               os.path.normcase(str(tras["path"])) != os.path.normcase(pequeno),
               str(tras["path"]))
         os.remove(pequeno)
-        check("la ayuda dice que basta con dejarlo al lado",
+        check("the help says dropping it alongside is enough",
               "junto al programa" in model_mod.help_text("616.64"))
-        check("la ayuda no manda a por el driver",
+        check("the help does not send you after the driver",
               "NO viene en el driver" in model_mod.help_text("616.64"))
-        check("la ayuda nombra los juegos que si lo traen",
+        check("the help names the games that do ship it",
               "NBA 2K27" in model_mod.help_text("616.64"))
-        # Onimusha y Dawnwalker salen en el anuncio de NVIDIA pero solo llevan
-        # DLSS 4.5. Mandar a instalarlos seria hacer perder 100 GB a alguien.
-        check("Onimusha NO figura como fuente del modelo",
+        # Onimusha and Dawnwalker appear in the NVIDIA announcement but only
+        # carry DLSS 4.5. Sending someone to install them wastes 100 GB.
+        check("Onimusha is NOT listed as a model source",
               not any("onimusha" in g.lower() for g in model_mod.SHIPPING_GAMES),
               str(model_mod.SHIPPING_GAMES))
-        check("Onimusha aparece avisado como que no sirve",
+        check("Onimusha is flagged as not carrying it",
               any("Onimusha" in k for k in model_mod.NOT_SHIPPING))
-        check("la ayuda dice que se puede instalar sin el modelo",
+        check("the help says you can install without the model",
               "sin el modelo" in model_mod.help_text("616.64"))
-        check("driver 616.64 se acepta", model_mod.driver_ok("616.64") is True)
-        check("driver 580.00 se rechaza", model_mod.driver_ok("580.00") is False)
-        check("driver desconocido no miente", model_mod.driver_ok(None) is None)
-        check("find_existing ignora DLL pequenos",
+        check("driver 616.64 is accepted", model_mod.driver_ok("616.64") is True)
+        check("driver 580.00 is rejected", model_mod.driver_ok("580.00") is False)
+        check("unknown driver does not lie", model_mod.driver_ok(None) is None)
+        check("find_existing ignores small DLLs",
               model_mod.find_existing()["path"] is None
               or os.path.getsize(model_mod.find_existing()["path"])
               >= model_mod.MIN_MODEL_MB << 20)
 
-        # --- editor de ajustes ---------------------------------------------
-        # Cada clave del catalogo tiene que existir de verdad en el INI. Una
-        # clave inventada se escribe sin error y no hace nada: justo el fallo
-        # que tenia Log.LoggingEnabled.
+        # --- settings editor ---------------------------------------------
+        # Every catalogue key must actually exist in the INI. An invented key
+        # writes without error and does nothing: exactly the Log.LoggingEnabled
+        # bug.
         ini_data = apply_mod.read_ini(ini)
         inventadas = [f"{s}.{k}" for _g, s, k, _l, _t, _e, _h
                       in opts.all_settings()
                       if k not in ini_data.get(s, {})]
-        check("ningun ajuste del catalogo es inventado", not inventadas,
+        check("no catalogue setting is invented", not inventadas,
               str(inventadas))
 
-        check("read_ini lee todas las secciones", len(ini_data) >= 38,
+        check("read_ini reads every section", len(ini_data) >= 38,
               str(len(ini_data)))
 
-        # Escribir desde el editor no debe crecer ni duplicar el archivo.
+        # Writing from the editor must not grow or duplicate the file.
         antes = open(ini, encoding="utf-8", errors="replace").read()
         apply_mod.set_ini(ini, {"DlssNr": {"ColourStrength": "0.80"},
                                 "CAS": {"Enabled": "true"}})
         despues = open(ini, encoding="utf-8", errors="replace").read()
-        check("editar no cambia el numero de lineas",
+        check("editing does not change the line count",
               antes.count("\n") == despues.count("\n"),
               f"{antes.count(chr(10))} -> {despues.count(chr(10))}")
         vuelto = apply_mod.read_ini(ini)
-        check("el valor editado se relee igual",
+        check("the edited value reads back the same",
               vuelto["DlssNr"]["ColourStrength"] == "0.80",
               vuelto["DlssNr"].get("ColourStrength"))
-        check("editar una seccion no toca otra",
+        check("editing one section leaves another alone",
               vuelto["CAS"]["Enabled"] == "true")
-        check("no se duplican claves al editar",
+        check("no keys duplicated when editing",
               despues.count("\nColourStrength=") == 1,
               str(despues.count("\nColourStrength=")))
 
-        # El editor no debe inventarse cambios por el mero hecho de dibujarse:
-        # ttk.Scale.set() dispara su callback al construir, y sin guarda eso
-        # convertiria cada 'auto' en el minimo del deslizador al guardar.
+        # The editor must not invent changes merely by drawing itself:
+        # ttk.Scale.set() fires its callback on construction, and without a
+        # guard that turns every auto into the slider minimum on save.
         try:
             import tkinter as tk
             import dlss5_editor as editor_mod
@@ -254,23 +254,23 @@ def main() -> int:
             ed.update()
             ed.update_idletasks()
 
-            check("abrir el editor no marca cambios falsos",
+            check("opening the editor marks no false changes",
                   not ed._collect(), str(ed._collect())[:120])
 
             ed.vars[("DlssNr", "ColourStrength")].set("0.75")
             solo = ed._collect()
-            check("un cambio se cuenta como uno",
+            check("one change counts as one",
                   sum(len(v) for v in solo.values()) == 1, str(solo))
-            check("el editor expone los 33 ajustes",
+            check("the editor exposes every catalogue setting",
                   len(ed.vars) == len(opts.all_settings()),
                   f"{len(ed.vars)} vs {len(opts.all_settings())}")
             ed.destroy()
             r.destroy()
-        except tk.TclError as e:                     # sin escritorio disponible
-            print(f"[ aviso ] editor no probado: {e}")
+        except tk.TclError as e:                     # no desktop available
+            print(f"[ note ] editor not tested: {e}")
 
-        # --- marcha atras --------------------------------------------------
-        print("\nRevirtiendo...")
+        # --- revert --------------------------------------------------
+        print("\nReverting...")
         apply_mod.revert(root, log=lambda m: print("   " + str(m)))
         after_revert = hash_tree(root)
 
@@ -279,19 +279,19 @@ def main() -> int:
         changed = sorted(k for k in before
                          if k in after_revert and before[k] != after_revert[k])
 
-        check("no falta ningun archivo original", not missing, str(missing[:5]))
-        check("no queda ningun archivo de sobra", not extra, str(extra[:5]))
-        check("ningun archivo original quedo alterado", not changed, str(changed[:5]))
-        check("la carpeta vuelve a su estado exacto",
+        check("no original file is missing", not missing, str(missing[:5]))
+        check("no leftover file remains", not extra, str(extra[:5]))
+        check("no original file was altered", not changed, str(changed[:5]))
+        check("the folder returns to its exact state",
               before == after_revert,
-              f"{len(missing)} faltan, {len(extra)} sobran, {len(changed)} cambiados")
+              f"{len(missing)} missing, {len(extra)} extra, {len(changed)} changed")
 
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
-    print(f"\n{len(OK)} correctas, {len(FAIL)} fallidas")
+    print(f"\n{len(OK)} passed, {len(FAIL)} failed")
     if FAIL:
-        print("Fallos: " + ", ".join(FAIL))
+        print("Failures: " + ", ".join(FAIL))
     return 1 if FAIL else 0
 
 
