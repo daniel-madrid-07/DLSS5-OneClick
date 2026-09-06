@@ -289,7 +289,9 @@ def set_ini(path: str, changes: dict[str, dict[str, str]]) -> None:
 def build_config(game: Game, preset: str, neural: bool, log_on: bool = False) -> dict:
     """Construye el conjunto de cambios del INI para este juego."""
     cfg: dict[str, dict[str, str]] = {
-        "Menu": {"OverlayMenu": "true"},
+        # F8 abre el overlay. OptiScaler trae Insert por defecto, pero esa tecla
+        # la usan bastantes juegos y varias capas de Steam/RTSS. 0x77 = VK_F8.
+        "Menu": {"OverlayMenu": "true", "ShortcutKey": "0x77"},
         # La clave es LogToFile, no LoggingEnabled: esa no existe en el INI y
         # se quedaba escrita al final de [Log] sin hacer nada.
         "Log": {"LogToFile": "true" if log_on else "false"},

@@ -126,8 +126,16 @@ GROUPS = [
          "R10G10B10A2 en lugar de R16G16B16A16 en coma flotante."),
         ("V-Sync", "OverrideVsync", "Controlar V-Sync", "bool", None,
          "Permite que OptiScaler gestione la sincronia vertical."),
-        ("Menu", "OverlayMenu", "Overlay con Insert", "bool", None,
-         "El menu dentro del juego. Sin esto pierdes el proxy reversible."),
+        ("Menu", "OverlayMenu", "Overlay dentro del juego", "bool", None,
+         "El menu de OptiScaler. Sin esto pierdes el proxy reversible y los "
+         "sliders en caliente."),
+        ("Menu", "ShortcutKey", "Tecla del overlay", "choice",
+         [("0x77", "F8  (por defecto aqui)"), ("0x78", "F9"),
+          ("0x7A", "F11"), ("0x7B", "F12"), ("0x2D", "Insert"),
+          ("0x24", "Inicio"), ("0x08", "Retroceso"), ("-1", "Ninguna")],
+         "Cambiala si el juego ya usa F8 para otra cosa."),
+        ("Menu", "Scale", "Tamano del overlay", "float", (0.5, 2.0, 0.1),
+         "Escala del menu dentro del juego. Util en 4K, donde se queda pequeno."),
         ("Log", "LogToFile", "Registro a archivo", "bool", None,
          "Escribe OptiScaler.log junto al juego. Hace falta activarlo antes "
          "de reportar cualquier problema. Cuesta algo de rendimiento."),
