@@ -240,7 +240,10 @@ This tool only downloads from the official repositories listed in `SOURCES`
 | `dlss5_opts.py` | Settings catalogue with real types and ranges |
 | `dlss5_editor.py` | Per-game visual editor |
 | `build.py` | Builds the release executable |
-| `tests.py` | 50 checks |
+| `tests.py` | 55 checks |
+
+The project's history, including the assumptions that turned out to be wrong,
+is in [CHANGELOG.md](CHANGELOG.md).
 
 ### Tests
 
