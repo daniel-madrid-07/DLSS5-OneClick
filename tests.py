@@ -269,6 +269,28 @@ def main() -> int:
         except tk.TclError as e:                     # no desktop available
             print(f"[ note ] editor not tested: {e}")
 
+        # --- DLSS DLL upgrade must be undoable ------------------------
+        # Found the hard way: upgrade_dlss_dll copied the old DLL into the
+        # backup folder but never recorded it in the manifest. revert() walks
+        # the manifest, not the folder, so the old DLL was left behind and then
+        # wiped along with the backup directory. "Reverts byte-for-byte" was
+        # simply false whenever the upgrade ran.
+        game_dll = os.path.join(root, "nvngx_dlss.dll")
+        original = hash_tree(root)[os.path.relpath(game_dll, root)]
+
+        newer = os.path.join(tmp, "newer_dlss.dll")
+        shutil.copy2(r"C:\Windows\System32\kernel32.dll", newer)
+        upgraded = apply_mod.upgrade_dlss_dll(
+            g, {"nvngx_dlss.dll": (newer, "999.0.0.0")}, log=lambda m: None)
+        check("a newer DLSS DLL is actually installed", upgraded)
+
+        after = apply_mod.read_manifest(root) or {}
+        check("the upgraded DLL is recorded in the manifest",
+              "nvngx_dlss.dll" in after.get("respaldados", {}),
+              str(list(after.get("respaldados", {}))))
+        check("the game DLL really changed",
+              hash_tree(root)[os.path.relpath(game_dll, root)] != original)
+
         # --- revert --------------------------------------------------
         print("\nReverting...")
         apply_mod.revert(root, log=lambda m: print("   " + str(m)))

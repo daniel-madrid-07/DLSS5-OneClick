@@ -533,6 +533,19 @@ def upgrade_dlss_dll(game: Game, harvest: dict, log=print) -> bool:
         if not os.path.exists(saved):
             shutil.copy2(cur_path, saved)
         shutil.copy2(src, cur_path)
+
+        # The backup copy is useless unless revert() is told about it: it
+        # walks the manifest, not the backup folder. Without this the old DLL
+        # survived on disk but was never put back, and then got wiped along
+        # with the backup directory.
+        manifest = read_manifest(game.exe_dir)
+        if manifest is not None:
+            rel = os.path.relpath(cur_path, game.exe_dir)
+            manifest.setdefault("respaldados", {})[rel] = rel
+            with open(os.path.join(backup, MANIFEST), "w",
+                      encoding="utf-8") as f:
+                json.dump(manifest, f, indent=2, ensure_ascii=False)
+
         log(f"  {dll_name}: {curver} -> {newver}")
         changed = True
 
