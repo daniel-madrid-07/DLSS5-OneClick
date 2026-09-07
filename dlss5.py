@@ -1,5 +1,5 @@
 """
-DLSS 5 One-Click  -  apply Neural Rendering to the games that can take it.
+DLSS5 Toolkit  -  apply Neural Rendering to the games that can take it.
 
 Tkinter UI, no dependencies. Run:  python dlss5.py
 """
@@ -36,7 +36,7 @@ TIER_TEXT = {
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("DLSS 5 One-Click")
+        self.title("DLSS5 Toolkit")
         self.geometry("1080x680")
         self.minsize(940, 600)
         self.configure(bg=BG)
@@ -101,7 +101,7 @@ class App(tk.Tk):
 
         head = ttk.Frame(self)
         head.pack(fill="x", pady=(14, 0), **pad)
-        ttk.Label(head, text="DLSS 5 One-Click", style="Head.TLabel").pack(side="left")
+        ttk.Label(head, text="DLSS5 Toolkit", style="Head.TLabel").pack(side="left")
         self.sys_lbl = ttk.Label(head, text="checking system...",
                                  style="Muted.TLabel")
         self.sys_lbl.pack(side="right")
@@ -245,9 +245,9 @@ class App(tk.Tk):
                     self.prog["value"] = frac * 100
                     self.prog_lbl.configure(text=text)
                 elif kind == "error":
-                    messagebox.showerror("DLSS 5 One-Click", str(payload))
+                    messagebox.showerror("DLSS5 Toolkit", str(payload))
                 elif kind == "info":
-                    messagebox.showinfo("DLSS 5 One-Click", str(payload))
+                    messagebox.showinfo("DLSS5 Toolkit", str(payload))
                 elif kind == "modelhelp":
                     messagebox.showwarning(
                         "Neural Rendering model missing",

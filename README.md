@@ -1,9 +1,9 @@
-# DLSS 5 One-Click
+# DLSS5 Toolkit
 
 Finds which of your installed games can take **DLSS 5 Neural Rendering**,
 installs it in one click, and removes it byte-for-byte.
 
-[![Download](https://img.shields.io/badge/Download-DLSS5--OneClick.exe-76b900?style=for-the-badge)](https://github.com/daniel-madrid-07/DLSS5-OneClick/releases/latest)
+[![Download](https://img.shields.io/badge/Download-DLSS5--Toolkit.exe-76b900?style=for-the-badge)](https://github.com/daniel-madrid-07/DLSS5-Toolkit/releases/latest)
 
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![No install](https://img.shields.io/badge/install-none-76b900)
@@ -11,8 +11,8 @@ installs it in one click, and removes it byte-for-byte.
 
 ## Download
 
-Grab **`DLSS5-OneClick.exe`** from the
-[latest release](https://github.com/daniel-madrid-07/DLSS5-OneClick/releases/latest)
+Grab **`DLSS5-Toolkit.exe`** from the
+[latest release](https://github.com/daniel-madrid-07/DLSS5-Toolkit/releases/latest)
 and run it. One ~11 MB file: **no Python, no installer, no registry changes.**
 
 <details>

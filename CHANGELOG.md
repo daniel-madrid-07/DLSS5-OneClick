@@ -84,7 +84,7 @@ extraction directory and is useless. `sys.executable` is the right answer when
 
 ### Single executable
 
-`build.py` produces `DLSS5-OneClick.exe` with PyInstaller (~11 MB, `--onefile
+`build.py` produces `DLSS5-Toolkit.exe` with PyInstaller (~11 MB, `--onefile
 --windowed`). No Python install, no installer, no registry changes.
 
 **Found while building it:** the exclusion list included `email`, `http` and

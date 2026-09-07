@@ -1,9 +1,9 @@
 """
-Builds DLSS5-OneClick.exe: a single executable, no Python install required.
+Builds DLSS5-Toolkit.exe: a single executable, no Python install required.
 
     python build.py
 
-The result lands in dist/DLSS5-OneClick.exe.
+The result lands in dist/DLSS5-Toolkit.exe.
 
 What deliberately stays OUT:
 
@@ -26,7 +26,7 @@ import shutil
 import subprocess
 import sys
 
-NAME = "DLSS5-OneClick"
+NAME = "DLSS5-Toolkit"
 ENTRY = "dlss5.py"
 
 # Our own modules, which PyInstaller misses because they are only imported
