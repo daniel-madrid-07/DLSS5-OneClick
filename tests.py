@@ -269,6 +269,48 @@ def main() -> int:
         except tk.TclError as e:                     # no desktop available
             print(f"[ note ] editor not tested: {e}")
 
+        # --- startup preselection -------------------------------------
+        # The window scans on startup and preselects a candidate so only Apply
+        # is left to press. That ranking must never pick an anti-cheat title,
+        # and among the rest must prefer the oldest DLSS DLL, because that game
+        # also gains a version bump on top of the neural pass.
+        try:
+            import tkinter as tk
+            import dlss5 as app_mod
+
+            r = tk.Tk()
+            r.withdraw()
+            app = app_mod.App.__new__(app_mod.App)   # no window, no scan
+            app.games = {}
+
+            def add(name, tier, dlss, anticheat=frozenset()):
+                g = scan.Game(name=name, root="C:/x/" + name, exe="C:/x/x.exe",
+                              exe_dir="C:/x/" + name, tier=tier,
+                              anticheat=set(anticheat))
+                g.dlss_version = dlss
+                app.games[g.key] = g
+                return g
+
+            add("Modern", "A", "310.1.0.0")
+            old = add("Ancient", "A", "2.2.10.0")
+            add("FsrOnly", "B", None)
+            add("Competitive", "A", "2.0.0.0", {"Easy Anti-Cheat"})
+            add("Unsupported", "D", None)
+
+            pick = app._best_candidate()
+            check("preselection prefers the oldest DLSS DLL",
+                  pick is not None and pick.name == old.name,
+                  pick.name if pick else "None")
+
+            app.games = {k: v for k, v in app.games.items()
+                         if v.anticheat or v.tier == "D"}
+            check("preselection never picks an anti-cheat title",
+                  app._best_candidate() is None,
+                  str(getattr(app._best_candidate(), "name", None)))
+            r.destroy()
+        except tk.TclError as e:                     # no desktop available
+            print(f"[ note ] preselection not tested: {e}")
+
         # --- DLSS DLL upgrade must be undoable ------------------------
         # Found the hard way: upgrade_dlss_dll copied the old DLL into the
         # backup folder but never recorded it in the manifest. revert() walks

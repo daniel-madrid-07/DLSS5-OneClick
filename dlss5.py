@@ -47,6 +47,9 @@ class App(tk.Tk):
         self.harvest: dict = {}
         self.q: queue.Queue = queue.Queue()
         self.busy = False
+        # The first system check chains straight into a library scan, so the
+        # window comes up already populated. Manual rechecks do not rescan.
+        self._autoscan = True
 
         self._style()
         self._build()
@@ -109,7 +112,7 @@ class App(tk.Tk):
 
         bar = ttk.Frame(self)
         bar.pack(fill="x", pady=(12, 8), **pad)
-        self.btn_scan = ttk.Button(bar, text="Scan installed games",
+        self.btn_scan = ttk.Button(bar, text="Rescan games",
                                    command=lambda: self._bg(self._scan_library))
         self.btn_scan.pack(side="left")
         self.btn_add = ttk.Button(bar, text="Add folder...",
@@ -249,6 +252,8 @@ class App(tk.Tk):
                     messagebox.showwarning(
                         "Neural Rendering model missing",
                         model_mod.help_text(payload))
+                elif kind == "pick":
+                    self._preselect()
                 elif kind == "done":
                     self.busy = False
                     self._buttons(True)
@@ -294,6 +299,11 @@ class App(tk.Tk):
 
         self.log("Looking for the newest nvngx_dlss*.dll on this PC...")
         self.harvest = scan.harvest_dlss_dlls()
+        if self._autoscan:
+            # The library scan takes ~3 s for 40 games, so it runs on startup
+            # rather than hiding behind a button nobody should have to find.
+            self._autoscan = False
+            self._scan_library()
         for name, (path, ver) in sorted(self.harvest.items()):
             self.log(f"  {name}  v{ver}")
 
@@ -353,6 +363,38 @@ class App(tk.Tk):
 
         usable = sum(1 for g in self.games.values() if g.tier in "AB")
         self.log(f"Done. {usable} games can take DLSS 5 in some form.")
+        self.q.put(("pick", None))
+
+    def _best_candidate(self) -> scan.Game | None:
+        """The game to preselect once the scan finishes.
+
+        Ranked the way it would be recommended by hand: never anti-cheat, never
+        one already installed, prefer native DLSS, and among those prefer the
+        game with the oldest DLSS DLL -- that one gains a version bump on top
+        of the neural pass, so it is where the difference shows most.
+        """
+        best, best_key = None, None
+        for g in self.games.values():
+            if g.tier not in ("A", "B") or g.anticheat or not g.exe_dir:
+                continue
+            if apply_mod.read_manifest(g.exe_dir):
+                continue
+            key = (0 if g.tier == "A" else 1,
+                   scan.version_tuple(g.dlss_version),
+                   g.name.lower())
+            if best_key is None or key < best_key:
+                best, best_key = g, key
+        return best
+
+    def _preselect(self):
+        """Select the best candidate so only Apply is left to press."""
+        if self.tree.selection():
+            return
+        g = self._best_candidate()
+        if g and self.tree.exists(g.key):
+            self.tree.selection_set(g.key)
+            self.tree.see(g.key)
+            self.log(f"Preselected: {g.name}")
 
     def _add_folder(self):
         path = filedialog.askdirectory(title="Game folder")
